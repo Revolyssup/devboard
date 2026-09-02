@@ -1,0 +1,26 @@
+{
+  "name": "devboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dashboard over shared agent learnings (work + personal) and active chores",
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node --watch server/index.js",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "node server/index.js",
+    "install:all": "npm install && npm --prefix web install",
+    "postinstall": "node scripts/fix-node-pty-perms.mjs",
+    "verify": "node scripts/verify-ui.mjs && node scripts/verify-extras.mjs && node scripts/verify-personal-chores.mjs && node scripts/verify-mutations.mjs && node scripts/verify-terminal.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "node-pty": "^1.1.0",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "puppeteer-core": "^25.9.0"
+  }
+}
