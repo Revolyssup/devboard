@@ -1,4 +1,6 @@
 # devboard
+<img width="3015" height="1262" alt="Screenshot 2026-09-02 at 2 48 49 PM" src="https://github.com/user-attachments/assets/778b1543-7c2d-42ea-801e-704fb4493859" />
+<img width="3248" height="950" alt="Screenshot 2026-09-02 at 2 48 33 PM" src="https://github.com/user-attachments/assets/3443ad0c-dd03-42d3-b11e-e21fb992bf2c" />
 
 A browser dashboard over the shared agent learnings libraries and chore tracker that live under
 `~/.agents/data`. The old `~/.claude` data paths remain compatibility links during migration.
