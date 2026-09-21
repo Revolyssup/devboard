@@ -72,7 +72,10 @@ export function ActiveDots({ sessions }: { sessions: SessionRef[] }) {
             <div key={s.id} style={{ marginBottom: 8 }}>
               <div className="tip-row">
                 <span className={`dot ${s.active ? 'on' : 'off'}`} />
-                <span className="tip-val" style={{ color: s.active ? '#3fb950' : '#8b96a5' }}>
+                <span
+                  className="tip-val"
+                  style={{ color: s.active ? 'var(--green)' : 'var(--faint)' }}
+                >
                   {s.active ? 'ACTIVE' : 'inactive'} · last seen {relativeTime(s.lastSeen)}
                 </span>
               </div>

@@ -1,6 +1,8 @@
 import { Fragment, useState } from 'react';
-import type { Learning, TerminalTarget } from '../types';
+import type { CodontBinding, EnvBinding, Learning, TerminalTarget } from '../types';
 import { ActiveDots } from './ActiveDot';
+import { EnvButton, bindingForSessions, useEnvBindings } from './EnvButton';
+import { CodontButton, codontForSessions, useCodontBindings } from './CodontButton';
 import { RunSessionButton } from './RunSessionButton';
 import { formatTimestamp } from './ui';
 
@@ -16,6 +18,8 @@ export function LearningsTable({
   onRunSession,
   openTerminals,
   onRestoreTerminal,
+  onOpenEnv,
+  onOpenCodont,
 }: {
   items: Learning[];
   onRead: (l: Learning) => void;
@@ -24,8 +28,12 @@ export function LearningsTable({
   onRunSession: (t: TerminalTarget) => void;
   openTerminals?: TerminalTarget[] | null;
   onRestoreTerminal?: (t: TerminalTarget) => void;
+  onOpenEnv: (b: EnvBinding) => void;
+  onOpenCodont: (b: CodontBinding) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const envBindings = useEnvBindings();
+  const codontBindings = useCodontBindings();
 
   const toggle = (filename: string) =>
     setExpanded((prev) => {
@@ -59,7 +67,15 @@ export function LearningsTable({
                 <td>
                   <ActiveDots sessions={l.sessions} />
                 </td>
-                <td className="cell-ts">{formatTimestamp(l.mtime)}</td>
+                {/* Env marker sits with the timestamp, on the left: it describes the row's
+                    session, not an action you take on the row. */}
+                <td className="cell-ts">
+                  <span className="ts-with-env" onClick={(e) => e.stopPropagation()}>
+                    <EnvButton binding={bindingForSessions(envBindings, l.sessions)} onOpen={onOpenEnv} />
+                    <CodontButton binding={codontForSessions(codontBindings, l.sessions)} onOpen={onOpenCodont} />
+                    <span>{formatTimestamp(l.mtime)}</span>
+                  </span>
+                </td>
                 <td className="cell-file">{l.filename}</td>
                 <td className="cell-name">
                   <div className="name-line">

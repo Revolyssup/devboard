@@ -62,9 +62,17 @@ export const config = {
     .map((p) => p.trim())
     .filter(Boolean),
 
-  maxTerminals: Number(process.env.DEVBOARD_MAX_TERMINALS || 3),
+  maxTerminals: Number(process.env.DEVBOARD_MAX_TERMINALS || 10),
   terminalIdleMs: Number(process.env.DEVBOARD_TERMINAL_IDLE_MS || 30 * 60 * 1000),
   ticketTtlMs: 30_000,
+
+  // Shared with ~/.claude/hooks/claude-notifier-on-*.js (Stop/UserPromptSubmit/PermissionRequest/
+  // PreToolUse-AskUserQuestion, registered for both Claude Code and Codex): one flat file, always
+  // overwritten with the latest "<reason> <ts> <sessionId> ..." event. Reusing it — rather than
+  // adding a second hook — means a terminal's busy/waiting state stays correct even when the
+  // signal came from the user working that same session in a plain terminal, not through devboard.
+  agentSignalFile:
+    process.env.DEVBOARD_AGENT_SIGNAL_FILE || path.join(home, '.claude', 'hooks', 'claude-signal'),
 
   // Origins allowed to open a terminal websocket. `ws` does not check Origin itself, so without
   // this any page you visit could open a socket to the loopback server.

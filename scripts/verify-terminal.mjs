@@ -22,6 +22,12 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const ROOT = path.join(path.dirname(new URL(import.meta.url).pathname), '..');
 
 const FIXTURE = path.join(HOME, '.devboard-verify', 'fixture-repo');
+// Environment bindings live under their own throwaway root: the Environment button reads them, and
+// the harness must never write into the real ~/.agents/environments. META still points at the real
+// recipe catalog, which is read-only from here.
+const ENV_ROOT = path.join(HOME, '.devboard-verify', 'env-state');
+const CODONT_ROOT = path.join(HOME, '.devboard-verify', 'codont-state');
+const ENV_META = path.join(HOME, '.agents', 'environments', 'meta');
 const PCHORES = path.join(HOME, '.claude', 'personal', 'chores');
 const PINDEX = path.join(PCHORES, 'index.txt');
 const WCHORES = path.join(HOME, '.claude', 'chores');
@@ -158,9 +164,16 @@ async function startServer() {
       DEVBOARD_CLAUDE_BIN: path.join(ROOT, 'scripts', 'fake-claude.sh'),
       DEVBOARD_CODEX_BIN: path.join(ROOT, 'scripts', 'fake-claude.sh'),
       DEVBOARD_TERMINAL_ROOTS: HOME,
+      DEVBOARD_FAKE_CLEAR_SCREEN: '1',
       DEVBOARD_FAKE_CHORE_FILE: path.join(PCHORES, LIVE_CHORE),
       DEVBOARD_FAKE_CHORE_INDEX: PINDEX,
       DEVBOARD_ALLOWED_ORIGINS: `${BASE},http://localhost:${PORT}`,
+      DEVBOARD_ENV_ROOT: ENV_ROOT,
+      DEVBOARD_CODONT_ROOT: CODONT_ROOT,
+      // If a test ever plain-clicks a code link, this absorbs the editor launch instead of
+      // popping a real VS Code window mid-verify.
+      DEVBOARD_CODE_BIN: '/usr/bin/true',
+      DEVBOARD_ENV_META: ENV_META,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -486,11 +499,70 @@ try {
       termText.includes(SID) && termText.includes(FIXTURE),
       termText.slice(0, 90).replace(/\n/g, ' ')
     );
+    const unloadWhileRunning = await page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+      const dispatchResult = window.dispatchEvent(event);
+      return { defaultPrevented: event.defaultPrevented, dispatchResult };
+    });
+    check(
+      'tab close is guarded while a terminal is running',
+      unloadWhileRunning.defaultPrevented && unloadWhileRunning.dispatchResult === false,
+      JSON.stringify(unloadWhileRunning)
+    );
     check(
       'chore warning banner is always visible',
       /end-chore/.test(termText) && /deletes this file/.test(termText)
     );
     check('pty output rendered into xterm', /FAKE-CLAUDE ready/.test(termText));
+    const scrollBefore = await page.$eval('.term-host .xterm-scrollable-element > .scrollbar', (e) => {
+      const slider = e.querySelector('.slider');
+      return {
+        className: e.className,
+        sliderTop: slider?.style.top || '',
+      };
+    });
+    const hostBox = await page.$eval('.term-host', (e) => {
+      const r = e.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    await page.mouse.move(hostBox.x, hostBox.y);
+    await page.mouse.wheel({ deltaY: -600 });
+    await sleep(300);
+    const scrollAfter = await page.$eval('.term-host .xterm-scrollable-element > .scrollbar', (e) => ({
+      className: e.className,
+      sliderTop: e.querySelector('.slider')?.style.top || '',
+    }));
+    check(
+      'terminal scrollbar is visible and tied to xterm scroll position',
+      String(scrollBefore.className).includes('visible') &&
+        scrollBefore.sliderTop !== scrollAfter.sliderTop,
+      JSON.stringify({ before: scrollBefore, after: scrollAfter })
+    );
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.term-overlay .overlay-head .btn')]
+        .find((b) => b.textContent.includes('View file'))
+        ?.click();
+    });
+    await page.waitForSelector('.term-file-view', { timeout: 5000 });
+    await sleep(500);
+    const fileViewText = await page.$eval('.term-file-view', (e) => e.textContent || '');
+    check(
+      'terminal can toggle to its attached chore file',
+      fileViewText.includes(LIVE_CHORE) && fileViewText.includes('seeded by verify-terminal.mjs'),
+      fileViewText.slice(0, 120).replace(/\n/g, ' ')
+    );
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.term-overlay .overlay-head .btn')]
+        .find((b) => b.textContent.includes('Terminal'))
+        ?.click();
+    });
+    await sleep(500);
+    const termAfterFileToggle = await page.$eval('.term-overlay', (e) => e.innerText).catch(() => '');
+    check(
+      'terminal survives returning from file view',
+      /FAKE-CLAUDE ready/.test(termAfterFileToggle) && termAfterFileToggle.includes(SID),
+      termAfterFileToggle.slice(0, 90).replace(/\n/g, ' ')
+    );
 
     const headerButtons = await page.$$eval('.term-overlay .overlay-head .btn', (b) =>
       b.map((x) => x.textContent.trim())
@@ -502,6 +574,202 @@ try {
         headerButtons.some((b) => b.includes('Close')),
       headerButtons.join(' | ')
     );
+
+    // The Environment button sits with the view controls so an environment can be opened without
+    // leaving fullscreen. It is ALWAYS rendered — disabled when the session has no environment —
+    // because a button that appears out of nowhere shifts the toolbar under the cursor.
+    check(
+      'terminal header has an Environment button',
+      headerButtons.some((b) => b.includes('Environment')),
+      headerButtons.join(' | ')
+    );
+    check(
+      'Environment is disabled when the session has no environment bound',
+      await page.$$eval('.term-overlay .overlay-head .btn', (bs) => {
+        const b = bs.find((x) => x.textContent.includes('Environment'));
+        return Boolean(b && b.disabled);
+      }),
+      'this fixture session has no binding, so it must be greyed out'
+    );
+
+    // Now bind an environment to this session and prove the same button becomes usable. The
+    // dashboard polls /api/env/sessions, so this must light up WITHOUT a page reload — reloading
+    // would tear the terminal down, which is the whole reason the button lives in this toolbar.
+    fs.mkdirSync(path.join(ENV_ROOT, 'sessions'), { recursive: true });
+    fs.writeFileSync(
+      path.join(ENV_ROOT, 'sessions', `${SID}.json`),
+      JSON.stringify({
+        session: SID,
+        agent: 'claude',
+        target: 'host-docker',
+        params: {},
+        instructions: 'verify-terminal fixture environment',
+        instances: [],
+        boundAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+    );
+    // useEnvBindings polls every 10s; give it a beat plus margin.
+    await sleep(13000);
+    const envBtn = await page.$$eval('.term-overlay .overlay-head .btn', (bs) => {
+      const b = bs.find((x) => x.textContent.includes('Environment'));
+      return b ? { text: b.textContent.trim(), disabled: b.disabled } : null;
+    });
+    check(
+      'Environment button enables itself once a binding appears, without a reload',
+      Boolean(envBtn && !envBtn.disabled),
+      JSON.stringify(envBtn)
+    );
+
+    // Ontology: same lifecycle as Environment. This check exists because the button once shipped
+    // permanently disabled — rendered fine, but the onOpenCodont prop was dropped by a silent
+    // patch miss, and `disabled={!codontBinding || !onOpenCodont}` can never enable without it.
+    fs.mkdirSync(path.join(CODONT_ROOT, SID, 'tabs'), { recursive: true });
+    fs.writeFileSync(
+      path.join(CODONT_ROOT, SID, 'binding.json'),
+      JSON.stringify({ session: SID, instruction: 'harness codont fixture', cwd: FIXTURE, createdAt: new Date().toISOString() })
+    );
+    fs.writeFileSync(path.join(CODONT_ROOT, SID, 'tabs.json'), '[]');
+    await sleep(13000);
+    const ontBtn = await page.$$eval('.term-overlay .overlay-head .btn', (bs) => {
+      const b = bs.find((x) => x.textContent.includes('Ontology'));
+      return b ? { text: b.textContent.trim(), disabled: b.disabled } : null;
+    });
+    check(
+      'Ontology button enables once a codont binding appears, without a reload',
+      Boolean(ontBtn && !ontBtn.disabled),
+      JSON.stringify(ontBtn)
+    );
+
+    // Clicking must swap the terminal BODY to the ontology view (View-File style), not stack a
+    // popup: the PTY stays mounted-but-hidden underneath, and clicking again returns to it.
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.term-overlay .overlay-head .btn')]
+        .find((b) => b.textContent.includes('Ontology'))
+        ?.click();
+    });
+    await sleep(600);
+    const inline = await page.evaluate(() => ({
+      body: Boolean(document.querySelector('.term-overlay .codont-body')),
+      termHidden: Boolean(document.querySelector('.term-overlay .term-host.hidden')),
+      modal: Boolean(document.querySelector('.overlay-backdrop .codont-overlay')),
+      toggleLabel: [...document.querySelectorAll('.term-overlay .overlay-head .btn')]
+        .map((b) => b.textContent.trim())
+        .find((t) => t === 'Terminal') || null,
+    }));
+    check('Ontology opens inline in the terminal body, not as a popup',
+      inline.body && inline.termHidden && !inline.modal, JSON.stringify(inline));
+    check('the button becomes the way back to the terminal', inline.toggleLabel === 'Terminal');
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.term-overlay .overlay-head .btn')]
+        .filter((b) => b.textContent.trim() === 'Terminal')
+        .pop()
+        ?.click();
+    });
+    await sleep(400);
+    check('toggling back restores the live terminal',
+      await page.evaluate(() => !document.querySelector('.term-overlay .term-host.hidden') &&
+        !document.querySelector('.term-overlay .codont-body')));
+    check(
+      'Environment button shows the root recipe icon',
+      Boolean(envBtn && /\p{Extended_Pictographic}/u.test(envBtn.text)),
+      JSON.stringify(envBtn)
+    );
+
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.term-overlay .overlay-head .btn')]
+        .find((b) => b.textContent.includes('Environment'))
+        ?.click();
+    });
+    await page.waitForSelector('.env-row', { timeout: 60000 }).catch(() => {});
+    check(
+      'clicking Environment opens the environment tree over the terminal',
+      await page.$$eval('.env-row', (r) => r.length > 0).catch(() => false)
+    );
+    // Close it again so the fullscreen checks below run against the terminal, not the overlay.
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.env-overlay .overlay-head .btn')]
+        .find((b) => b.textContent.trim() === 'Close')
+        ?.click();
+    });
+    await sleep(400);
+
+    // ---- code links: file:line in terminal output → verified link → alt-click peek ----
+    // A known file in the terminal's cwd, typed into the fake agent so it echoes back as a row of
+    // buffer text. Hovering the row makes the link provider fire /api/code/resolve; the reference
+    // only becomes a link because that resolve succeeds (verify-before-linkify), and alt-clicking
+    // it must open the CodePeek overlay labeled "working tree (unpinned)" — no @sha was given.
+    // Real tab indentation on purpose: the peek sets tab-size to match the editor config, and a
+    // space-only fixture would leave that untested.
+    fs.writeFileSync(
+      path.join(FIXTURE, 'peekme.js'),
+      'function demo(x) {\n\tif (x > 1) {\n\t\treturn "target line"; // 3\n\t}\n\treturn null;\n}\n'
+    );
+    let resolveCalls = 0;
+    const onReq = (req) => {
+      if (req.url().includes('/api/code/resolve')) resolveCalls++;
+    };
+    page.on('request', onReq);
+
+    await page.click('.term-overlay .xterm');
+    await page.keyboard.type('peekme.js:3', { delay: 10 });
+    await page.keyboard.press('Enter');
+    await sleep(600);
+
+    // Find the echoed row in the DOM renderer and hover it so provideLinks runs.
+    const rowBox = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.term-overlay .xterm-rows > div')];
+      const row = rows.find((r) => r.textContent.includes('ECHO: peekme.js:3'));
+      if (!row) return null;
+      const el = [...row.querySelectorAll('span')].find((sp) => sp.textContent.includes('peekme.js:3')) || row;
+      const b = el.getBoundingClientRect();
+      // Aim inside the ref text: past "ECHO: " when the span is the whole row.
+      return { x: b.x + Math.min(b.width - 4, 120), y: b.y + b.height / 2 };
+    });
+    check('echoed file ref is visible in the terminal DOM', !!rowBox);
+
+    if (rowBox) {
+      await page.mouse.move(rowBox.x, rowBox.y);
+      await sleep(700); // provider fetch + link registration
+      check('hovering the ref triggers verify-before-linkify', resolveCalls > 0, String(resolveCalls));
+
+      await page.keyboard.down('Alt');
+      await page.mouse.click(rowBox.x, rowBox.y);
+      await page.keyboard.up('Alt');
+      const peeked = await page
+        .waitForSelector('.code-peek', { timeout: 8000 })
+        .then(() => true)
+        .catch(() => false);
+      check('alt-click opens the code peek overlay', peeked);
+      if (peeked) {
+        // The overlay mounts before its fetch returns; assertions must wait for content or a
+        // server error, not the shell.
+        await page
+          .waitForSelector('.code-peek-table, .code-peek .error-banner', { timeout: 8000 })
+          .catch(() => {});
+        const peekErr = await page
+          .$eval('.code-peek .error-banner', (e) => e.textContent.trim())
+          .catch(() => null);
+        check('peek loaded without a server error', peekErr === null, String(peekErr));
+        const label = await page.$eval('.code-peek-ref', (e) => e.textContent.trim()).catch(() => '');
+        check('peek without @sha is labeled working tree (unpinned)', label.includes('unpinned'), label);
+        const target = await page
+          .$eval('.code-peek-target .code-peek-num', (e) => e.textContent.trim())
+          .catch(() => '');
+        check('peek highlights the referenced line', target === '3', target);
+        // Optional visual capture of the open peek, for styling work.
+        if (process.env.DEVBOARD_SHOT) {
+          await page.screenshot({ path: process.env.DEVBOARD_SHOT });
+        }
+        await page.evaluate(() => {
+          [...document.querySelectorAll('.code-peek .overlay-head .btn')]
+            .find((b) => b.textContent.trim() === 'Close')
+            ?.click();
+        });
+        await sleep(300);
+      }
+    }
+    page.off('request', onReq);
 
     await page.evaluate(() => {
       [...document.querySelectorAll('.term-overlay .overlay-head .btn')]
@@ -624,6 +892,66 @@ try {
       secondTermText.slice(0, 90).replace(/\n/g, ' ')
     );
 
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.term-backdrop:not(.term-minimized) .overlay-head .btn')]
+        .find((b) => b.textContent.includes('Fullscreen'))
+        ?.click();
+    });
+    await sleep(500);
+    const fullscreenTabs = await page.evaluate(() => {
+      const overlay = document.querySelector('.term-backdrop:not(.term-minimized) .term-overlay');
+      return {
+        fullscreen: Boolean(overlay?.classList.contains('fullscreen')),
+        tabs: [...document.querySelectorAll('.term-backdrop:not(.term-minimized) .term-tab')].map((t) => ({
+          title: t.getAttribute('title') || '',
+          active: t.getAttribute('aria-selected') === 'true',
+          text: t.textContent || '',
+        })),
+      };
+    });
+    check(
+      'fullscreen terminal shows tabs for all running sessions',
+      fullscreenTabs.fullscreen &&
+        fullscreenTabs.tabs.length === 2 &&
+        fullscreenTabs.tabs.some((t) => t.title.includes(SID) && !t.active) &&
+        fullscreenTabs.tabs.some((t) => t.title.includes(SID2) && t.active),
+      JSON.stringify(fullscreenTabs)
+    );
+
+    await page.evaluate((sid) => {
+      [...document.querySelectorAll('.term-backdrop:not(.term-minimized) .term-tab')]
+        .find((t) => (t.getAttribute('title') || '').includes(sid))
+        ?.click();
+    }, SID);
+    await sleep(700);
+    const firstTabText = await page
+      .$eval('.term-backdrop:not(.term-minimized) .term-overlay', (e) => e.innerText)
+      .catch(() => '');
+    check(
+      'clicking a fullscreen tab switches to that running session',
+      firstTabText.includes(SID) &&
+        !firstTabText.includes(SID2) &&
+        (await page
+          .$eval('.term-backdrop:not(.term-minimized) .term-overlay', (e) => e.classList.contains('fullscreen'))
+          .catch(() => false)),
+      firstTabText.slice(0, 90).replace(/\n/g, ' ')
+    );
+
+    await page.evaluate((sid) => {
+      [...document.querySelectorAll('.term-backdrop:not(.term-minimized) .term-tab')]
+        .find((t) => (t.getAttribute('title') || '').includes(sid))
+        ?.click();
+    }, SID2);
+    await sleep(700);
+    const secondTabText = await page
+      .$eval('.term-backdrop:not(.term-minimized) .term-overlay', (e) => e.innerText)
+      .catch(() => '');
+    check(
+      'clicking back to the second fullscreen tab restores that session',
+      secondTabText.includes(SID2),
+      secondTabText.slice(0, 90).replace(/\n/g, ' ')
+    );
+
     // Close the second session — the first must survive untouched, still resumable.
     await page.evaluate(() => {
       [...document.querySelectorAll('.term-backdrop:not(.term-minimized) .btn')]
@@ -673,6 +1001,16 @@ try {
       p.on('close', () => resolve(s.includes(`--resume ${SID}`)));
     });
     check('closing the popup terminates the session', !stillRunning);
+    const unloadAfterClose = await page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+      const dispatchResult = window.dispatchEvent(event);
+      return { defaultPrevented: event.defaultPrevented, dispatchResult };
+    });
+    check(
+      'tab close guard is removed after all terminals close',
+      !unloadAfterClose.defaultPrevented && unloadAfterClose.dispatchResult === true,
+      JSON.stringify(unloadAfterClose)
+    );
 
     check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' ; '));
     await browser.close();

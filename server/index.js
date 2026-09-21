@@ -11,6 +11,10 @@ import { learningsRouter } from './routes/learnings.js';
 import { choresRouter } from './routes/chores.js';
 import { reportsRouter, reportsFileRouter } from './routes/reports.js';
 import { terminalRouter } from './routes/terminal.js';
+import { envRouter } from './routes/env.js';
+import { codeRouter } from './routes/code.js';
+import { codontRouter } from './routes/codont.js';
+import { subscribe as subscribeRun } from './lib/env/executor.js';
 import { sessionSnapshot } from './lib/sessions.js';
 import { attach, redeemTicket, reapOrphans, shutdownAll } from './lib/terminals.js';
 
@@ -38,6 +42,9 @@ app.use('/api/learnings', learningsRouter);
 app.use('/api/chores', choresRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/terminal', terminalRouter);
+app.use('/api/env', envRouter);
+app.use('/api/code', codeRouter);
+app.use('/api/codont', codontRouter);
 app.use('/reports', reportsFileRouter);
 
 // Serve the built SPA when it exists (production / `npm run build`).
@@ -73,12 +80,30 @@ server.on('upgrade', (req, socket, head) => {
   } catch {
     return reject('bad url');
   }
-  if (url.pathname !== '/api/terminal') return reject('unknown endpoint');
+  if (url.pathname !== '/api/terminal' && url.pathname !== '/api/env/stream') {
+    return reject('unknown endpoint');
+  }
 
   // `ws` does not check Origin. Without this, any page you visit could open a socket to the
   // loopback server and drive a claude session.
   const origin = req.headers.origin;
   if (origin && !config.allowedOrigins.includes(origin)) return reject('origin not allowed');
+
+  // Environment run logs are read-only: no ticket, but also no way to send anything back. The
+  // socket only ever receives, so it cannot be used to drive an environment change.
+  if (url.pathname === '/api/env/stream') {
+    const runId = url.searchParams.get('run') || '';
+    if (!runId) return reject('run id required');
+    return wss.handleUpgrade(req, socket, head, (ws) => {
+      const off = subscribeRun(runId, (ev) => {
+        if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(ev));
+      });
+      ws.on('close', off);
+      ws.on('error', off);
+      // Ignore anything the client sends; this endpoint is strictly one-directional.
+      ws.on('message', () => {});
+    });
+  }
 
   const entry = redeemTicket(url.searchParams.get('ticket') || '');
   if (!entry) return reject('bad or expired ticket');

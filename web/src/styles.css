@@ -1,19 +1,38 @@
 :root {
-  --bg: #0c0f14;
-  --panel: #12161d;
-  --panel-2: #161b24;
-  --border: #232b36;
-  --border-soft: #1b222c;
-  --text: #dbe2ea;
-  --muted: #8b96a5;
-  --faint: #626d7c;
-  --accent: #58a6ff;
-  --accent-dim: #1f6feb;
-  --green: #3fb950;
-  --green-dim: #1a3f24;
-  --red: #f85149;
-  --amber: #d29922;
-  --purple: #bc8cff;
+  /* Rosé Pine (main). Dark-mode only, by design: no light variant exists here. Work and Personal
+     intentionally share the exact same palette — no per-section shade. */
+  --bg: #191724;
+  --bg-rgb: 25, 23, 36;
+  --panel: #1f1d2e;
+  --panel-2: #26233a;
+  --border: #403d52;
+  --border-soft: #21202e;
+  --border-strong: #524f67;
+  --text: #e0def4;
+  --muted: #908caa;
+  --faint: #6e6a86;
+
+  --accent: #9ccfd8;
+  --accent-rgb: 156, 207, 216;
+  --accent-dim: #c4a7e7;
+  --accent-dim-rgb: 196, 167, 231;
+  --accent-dim-hover: #d4bdf0;
+  --accent-tint: rgba(var(--accent-rgb), 0.35);
+
+  --green: #31748f;
+  --green-rgb: 49, 116, 143;
+  --green-dim: rgba(var(--green-rgb), 0.35);
+
+  --red: #eb6f92;
+  --red-rgb: 235, 111, 146;
+  --red-dim: rgba(var(--red-rgb), 0.35);
+
+  --amber: #f6c177;
+  --amber-rgb: 246, 193, 119;
+  --amber-dim: rgba(var(--amber-rgb), 0.35);
+
+  --purple: #ebbcba;
+
   --radius: 8px;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
@@ -179,8 +198,8 @@ a {
 }
 
 .btn:hover {
-  border-color: #3a4553;
-  background: #1c2230;
+  border-color: var(--border-strong);
+  background: var(--border-soft);
 }
 
 .btn.primary {
@@ -190,7 +209,8 @@ a {
 }
 
 .btn.primary:hover {
-  background: #2b7ef0;
+  background: var(--accent-dim-hover);
+  border-color: var(--accent-dim-hover);
 }
 
 .btn.danger:hover {
@@ -285,7 +305,7 @@ tbody tr:last-child td {
 }
 
 tbody tr.row:hover {
-  background: #141922;
+  background: var(--border-soft);
 }
 
 .clickable-row {
@@ -368,7 +388,7 @@ tbody tr.row:hover {
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: #1b2330;
+  background: var(--panel-2);
   color: var(--muted);
   border: 1px solid var(--border-soft);
 }
@@ -382,7 +402,7 @@ tbody tr.row:hover {
 }
 .tag.unindexed {
   color: var(--amber);
-  border-color: #3a3016;
+  border-color: var(--amber-dim);
 }
 
 .row-actions {
@@ -405,10 +425,19 @@ tbody tr.row:hover {
   padding-bottom: 5px;
 }
 
-.run-btn.running {
+/* A running session is either 'busy' (agent actively working, green) or 'idle' (finished, or
+   blocked on a permission/question — waiting on you, rosé/iris). Driven by the shared notifier
+   signal file — see server/lib/terminals.js and TerminalOverlay's 'agent-state' messages. */
+.run-btn.running.busy {
   color: var(--green);
-  border-color: #23603a;
-  background: rgba(63, 185, 80, 0.08);
+  border-color: var(--green-dim);
+  background: rgba(var(--green-rgb), 0.1);
+}
+
+.run-btn.running.idle {
+  color: var(--accent-dim);
+  border-color: rgba(var(--accent-dim-rgb), 0.4);
+  background: rgba(var(--accent-dim-rgb), 0.1);
 }
 
 .run-agent-icons {
@@ -423,17 +452,17 @@ tbody tr.row:hover {
   height: 16px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: #101720;
+  background: var(--bg);
   object-fit: contain;
   padding: 2px;
 }
 
 .agent-icon.claude {
-  border-color: #6f5120;
+  border-color: var(--amber-dim);
 }
 
 .agent-icon.codex {
-  border-color: #23536b;
+  border-color: var(--accent-tint);
 }
 
 .run-label {
@@ -451,7 +480,7 @@ tbody tr.row:hover {
   top: calc(100% + 6px);
   z-index: 80;
   min-width: 270px;
-  background: #0a0d12;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 7px;
@@ -507,7 +536,7 @@ tbody tr.row:hover {
 /* expandable keywords row */
 
 .keywords-row td {
-  background: #0f131a;
+  background: var(--bg);
   border-bottom: 1px solid var(--border-soft);
   padding: 12px 12px 14px 40px;
 }
@@ -532,9 +561,9 @@ tbody tr.row:hover {
   font-size: 10.5px;
   padding: 2px 7px;
   border-radius: 4px;
-  background: #17202c;
-  border: 1px solid #263141;
-  color: #9fb3cc;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
 }
 
 .keywords-summary {
@@ -564,22 +593,22 @@ tbody tr.row:hover {
 
 .dot.on {
   background: var(--green);
-  box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.16);
+  box-shadow: 0 0 0 3px rgba(var(--green-rgb), 0.18);
 }
 
 .dot.off {
-  background: #46505e;
+  background: var(--border-strong);
 }
 
 .dot.none {
   background: transparent;
-  border: 1px dashed #3a4453;
+  border: 1px dashed var(--border);
 }
 
 .tip {
   position: fixed;
   z-index: 90;
-  background: #0a0d12;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 9px 10px;
@@ -667,17 +696,17 @@ tbody tr.row:hover {
 .pill.done {
   color: var(--green);
   border-color: var(--green-dim);
-  background: rgba(63, 185, 80, 0.07);
+  background: rgba(var(--green-rgb), 0.1);
 }
 .pill.happening {
   color: var(--accent);
-  border-color: #17324f;
-  background: rgba(88, 166, 255, 0.07);
+  border-color: var(--accent-tint);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 .pill.pending {
   color: var(--amber);
-  border-color: #3a3016;
-  background: rgba(210, 153, 34, 0.07);
+  border-color: var(--amber-dim);
+  background: rgba(var(--amber-rgb), 0.1);
 }
 
 .chore-now {
@@ -722,7 +751,7 @@ tbody tr.row:hover {
 .overlay-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(3, 5, 8, 0.72);
+  background: rgba(var(--bg-rgb), 0.72);
   backdrop-filter: blur(3px);
   z-index: 60;
   display: flex;
@@ -796,8 +825,8 @@ tbody tr.row:hover {
 }
 
 .editing-banner {
-  background: rgba(210, 153, 34, 0.1);
-  border-bottom: 1px solid #3a3016;
+  background: rgba(var(--amber-rgb), 0.12);
+  border-bottom: 1px solid var(--amber-dim);
   color: var(--amber);
   font-family: var(--mono);
   font-size: 11.5px;
@@ -815,7 +844,7 @@ tbody tr.row:hover {
   resize: none;
   border: none;
   outline: none;
-  background: #0b0e13;
+  background: var(--bg);
   color: var(--text);
   font-family: var(--mono);
   font-size: 12.5px;
@@ -846,7 +875,7 @@ tbody tr.row:hover {
 .search-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(3, 5, 8, 0.7);
+  background: rgba(var(--bg-rgb), 0.7);
   backdrop-filter: blur(3px);
   z-index: 70;
   display: flex;
@@ -906,7 +935,7 @@ tbody tr.row:hover {
 
 .result:hover,
 .result.sel {
-  background: #161d29;
+  background: var(--border-soft);
 }
 
 .result-top {
@@ -971,7 +1000,7 @@ kbd {
 .md {
   font-size: 14px;
   line-height: 1.72;
-  color: #c9d3de;
+  color: var(--text);
   max-width: 100%;
 }
 
@@ -1037,15 +1066,15 @@ kbd {
 .md code {
   font-family: var(--mono);
   font-size: 12px;
-  background: #1b222d;
+  background: var(--panel-2);
   border: 1px solid var(--border-soft);
   border-radius: 4px;
   padding: 1px 5px;
-  color: #a5d6ff;
+  color: var(--accent);
 }
 
 .md pre {
-  background: #0a0d12;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 13px 15px;
@@ -1057,7 +1086,7 @@ kbd {
   background: none;
   border: none;
   padding: 0;
-  color: #c9d3de;
+  color: var(--text);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -1109,32 +1138,32 @@ kbd {
   max-width: 100%;
 }
 
-/* highlight.js — minimal dark tokens */
+/* highlight.js — Rosé Pine tokens */
 .hljs-comment,
 .hljs-quote {
-  color: #6a7580;
+  color: var(--faint);
 }
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-literal {
-  color: #ff7b72;
+  color: var(--red);
 }
 .hljs-string,
 .hljs-attr {
-  color: #a5d6ff;
+  color: var(--accent);
 }
 .hljs-number,
 .hljs-built_in {
-  color: #79c0ff;
+  color: var(--accent-dim);
 }
 .hljs-title,
 .hljs-section,
 .hljs-name {
-  color: #d2a8ff;
+  color: var(--purple);
 }
 .hljs-type,
 .hljs-class .hljs-title {
-  color: #ffa657;
+  color: var(--amber);
 }
 
 /* ---------- misc ---------- */
@@ -1156,9 +1185,9 @@ kbd {
 }
 
 .error-banner {
-  background: rgba(248, 81, 73, 0.09);
-  border: 1px solid #4a1f1d;
-  color: #ff9a94;
+  background: rgba(var(--red-rgb), 0.1);
+  border: 1px solid var(--red-dim);
+  color: var(--red);
   border-radius: 6px;
   padding: 9px 12px;
   font-size: 12.5px;
@@ -1192,6 +1221,51 @@ kbd {
 }
 .toast.err {
   border-left-color: var(--red);
+}
+
+/* A background session going idle — persistent until acted on, unlike the auto-dismissing toasts
+   above, so top-right keeps it from competing with them for the same corner. */
+.session-notice-stack {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 130;
+  max-width: 340px;
+}
+
+.session-notice {
+  background: var(--panel-2);
+  border: 1px solid rgba(var(--accent-dim-rgb), 0.4);
+  border-left: 3px solid var(--accent-dim);
+  border-radius: 6px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.session-notice-body {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 12.5px;
+  margin-bottom: 9px;
+}
+
+.session-notice-glyph {
+  color: var(--accent-dim);
+  flex-shrink: 0;
+}
+
+.session-notice-text strong {
+  font-weight: 600;
+}
+
+.session-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .confirm {
@@ -1288,7 +1362,7 @@ kbd {
 .agent-choice.selected {
   color: var(--text);
   border-color: var(--accent);
-  background: #1b2432;
+  background: var(--border-soft);
 }
 
 .fixed-directory {
@@ -1316,7 +1390,7 @@ kbd {
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #10151d;
+  background: var(--bg);
   margin-top: -4px;
 }
 
@@ -1393,6 +1467,75 @@ kbd {
   min-height: 0;
 }
 
+.term-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px 0;
+  scrollbar-width: thin;
+}
+
+.term-tab {
+  display: grid;
+  grid-template-columns: 18px minmax(70px, 1fr);
+  grid-template-rows: 17px 15px;
+  column-gap: 7px;
+  align-items: center;
+  width: clamp(180px, 22vw, 280px);
+  min-width: 160px;
+  max-width: 300px;
+  height: 48px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 7px 10px 6px;
+  text-align: left;
+}
+
+.term-tab:hover {
+  background: var(--border-soft);
+  color: var(--text);
+}
+
+.term-tab.active {
+  background: var(--bg);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.term-tab .agent-icon {
+  grid-row: 1 / 3;
+  width: 18px;
+  height: 18px;
+}
+
+.term-tab-main,
+.term-tab-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.term-tab-main {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.term-tab-meta {
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 10.5px;
+}
+
 .term-glyph {
   color: var(--green);
   margin-right: 4px;
@@ -1411,11 +1554,30 @@ kbd {
 }
 .term-status.live {
   color: var(--green);
-  border-color: #23603a;
+  border-color: var(--green-dim);
 }
 .term-status.error {
   color: var(--red);
-  border-color: #5c2320;
+  border-color: var(--red-dim);
+}
+
+/* Busy vs waiting-for-you — color only, no label (a wrong label reads as a confident claim; a
+   dot is just a hint). See the .run-btn.running note above for where this state comes from. */
+.agent-activity-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+.agent-activity-dot.busy {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(var(--green-rgb), 0.18);
+}
+.agent-activity-dot.idle {
+  background: var(--accent-dim);
+  box-shadow: 0 0 0 3px rgba(var(--accent-dim-rgb), 0.18);
 }
 
 /* The always-on warning. Reliable in a way that inferring intent from keystrokes is not. */
@@ -1426,8 +1588,8 @@ kbd {
 }
 
 .term-warning {
-  background: #2a2413;
-  border-bottom: 1px solid #4a3d16;
+  background: rgba(var(--amber-rgb), 0.14);
+  border-bottom: 1px solid var(--amber-dim);
   color: var(--amber);
   font-family: var(--mono);
   font-size: 11.5px;
@@ -1435,8 +1597,8 @@ kbd {
 }
 
 .term-learning {
-  background: #102017;
-  border-bottom: 1px solid #23603a;
+  background: rgba(var(--green-rgb), 0.14);
+  border-bottom: 1px solid var(--green-dim);
   color: var(--green);
   font-family: var(--mono);
   font-size: 11.5px;
@@ -1447,8 +1609,8 @@ kbd {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #12261a;
-  border-bottom: 1px solid #23603a;
+  background: rgba(var(--green-rgb), 0.14);
+  border-bottom: 1px solid var(--green-dim);
   color: var(--green);
   font-family: var(--mono);
   font-size: 12px;
@@ -1458,9 +1620,60 @@ kbd {
 .term-host {
   flex: 1;
   min-height: 420px;
-  background: #0b0e13;
+  background: var(--bg);
   padding: 8px 6px 4px 10px;
   overflow: hidden;
+}
+
+.term-host .xterm {
+  height: 100%;
+}
+
+.term-host .xterm-viewport {
+  background: var(--bg) !important;
+}
+
+.term-host.hidden {
+  display: none;
+}
+
+.term-host .xterm-scrollable-element > .scrollbar > .slider {
+  background: var(--border-strong) !important;
+  border-radius: 999px;
+}
+
+.term-host .xterm-scrollable-element > .scrollbar > .slider:hover,
+.term-host .xterm-scrollable-element > .scrollbar > .slider.active {
+  background: var(--muted) !important;
+}
+
+.term-file-view {
+  flex: 1;
+  min-height: 420px;
+  overflow: auto;
+  background: var(--panel);
+  padding: 0 18px 18px;
+}
+
+.term-file-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 10px 0;
+}
+
+.term-file-head code {
+  color: var(--text);
+  font-size: 11px;
 }
 
 .term-foot {
@@ -1474,3 +1687,393 @@ kbd {
 .dock-session {
   color: var(--muted);
 }
+
+/* --- environment composition ------------------------------------------------------------- */
+
+.env-overlay { display: flex; flex-direction: column; }
+
+.env-body {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.env-tree, .env-side {
+  overflow-y: auto;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 8px;
+}
+
+.env-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.env-row:hover { background: var(--accent-tint); }
+.env-row.selected { background: rgba(var(--accent-dim-rgb), 0.22); }
+
+.env-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.env-row-kind { color: var(--faint); font-size: 11px; }
+.env-row-state { color: var(--muted); font-size: 11px; min-width: 62px; text-align: right; }
+.env-row-lease {
+  font-size: 10px; color: var(--accent-dim);
+  border: 1px solid rgba(var(--accent-dim-rgb), 0.45);
+  border-radius: 999px; padding: 1px 6px;
+}
+
+/* One dot, four states. Colour is the whole signal — same convention as the terminal badge. */
+.env-state { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.env-state.healthy  { background: var(--green);      box-shadow: 0 0 0 3px rgba(var(--green-rgb), 0.18); }
+.env-state.degraded { background: var(--amber);      box-shadow: 0 0 0 3px rgba(var(--amber-rgb), 0.18); }
+.env-state.absent   { background: var(--faint); }
+.env-state.unknown  { background: var(--red);        box-shadow: 0 0 0 3px rgba(var(--red-rgb), 0.18); }
+
+.env-detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.env-detail-head h3 { margin: 0; font-size: 15px; }
+
+.env-detail-label {
+  text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px;
+  color: var(--faint); margin: 14px 0 6px;
+}
+
+.env-props { width: 100%; border-collapse: collapse; font-size: 12px; }
+.env-props td { padding: 3px 8px 3px 0; vertical-align: top; border-bottom: 1px solid var(--border-soft); }
+.env-props td:first-child { color: var(--muted); white-space: nowrap; width: 1%; }
+.env-null { color: var(--faint); font-style: italic; }
+
+.env-list { margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+.env-list li { margin: 2px 0; }
+.env-list.err { color: var(--red); }
+.env-list.dim { color: var(--faint); }
+.env-list code, .env-inst code { font-size: 11px; color: var(--accent-dim); }
+
+.env-inst { font-size: 12px; color: var(--muted); }
+.env-inst .dim { color: var(--faint); }
+
+.env-detail-actions { display: flex; align-items: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.env-note { color: var(--faint); font-size: 12px; }
+.env-generated { margin-top: 10px; padding-left: 10px; }
+
+.env-plan-steps { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
+.env-plan-step {
+  display: grid; grid-template-columns: 82px 150px 1fr;
+  gap: 8px; font-size: 12px; padding: 4px 6px; border-radius: 4px;
+  background: var(--panel-2);
+}
+.env-action { font-weight: 600; font-size: 11px; }
+.env-plan-step.reuse    .env-action { color: var(--green); }
+.env-plan-step.create   .env-action { color: var(--accent); }
+.env-plan-step.rebuild  .env-action,
+.env-plan-step.repair   .env-action { color: var(--amber); }
+.env-plan-step.teardown .env-action { color: var(--red); }
+.env-plan-step.manual   .env-action { color: var(--purple); }
+.env-plan-step.blocked  .env-action { color: var(--red); }
+.env-plan-layer { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.env-plan-reason { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+
+.env-plan-summary { font-size: 12px; color: var(--muted); margin: 10px 0; }
+
+.env-warning {
+  font-size: 12px; color: var(--amber); background: rgba(var(--amber-rgb), 0.10);
+  border: 1px solid rgba(var(--amber-rgb), 0.35); border-radius: 6px;
+  padding: 8px 10px; margin: 8px 0;
+}
+.env-warning.err {
+  color: var(--red); background: rgba(var(--red-rgb), 0.10);
+  border-color: rgba(var(--red-rgb), 0.35);
+}
+
+.env-confirm {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--red); margin: 10px 0;
+}
+
+.env-log {
+  margin: 10px 0 0; padding: 10px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  font-size: 11px; line-height: 1.5; color: var(--muted);
+  max-height: 46vh; overflow: auto; white-space: pre-wrap; word-break: break-word;
+}
+
+.env-run-status.running   { color: var(--accent); }
+.env-run-status.succeeded { color: var(--green); }
+.env-run-status.failed    { color: var(--red); }
+.env-run-status.aborted   { color: var(--amber); }
+
+.env-plan-step.done   .env-plan-reason { color: var(--green); }
+.env-plan-step.failed .env-plan-reason,
+.env-plan-step.unverified .env-plan-reason { color: var(--red); }
+
+@media (max-width: 900px) {
+  .env-body { grid-template-columns: 1fr; }
+}
+
+/* The env overlay owns its own scrolling panes, so the panel itself must not scroll. */
+.env-overlay .env-body { padding: 0 16px 16px; }
+.env-overlay { max-height: 100%; }
+
+/* Probe in flight. The tree renders from cache immediately, so a slow layer spins on its own row
+   rather than putting a wall in front of the whole view. */
+.env-spinner {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block;
+  border: 1.5px solid rgba(var(--accent-dim-rgb), 0.35);
+  border-top-color: var(--accent-dim);
+  animation: env-spin 0.7s linear infinite;
+}
+@keyframes env-spin { to { transform: rotate(360deg); } }
+
+/* Cached-but-old. Shown, never hidden — staleness is a label, not a reason to withhold data. */
+.env-row-state.stale { opacity: 0.55; font-style: italic; }
+
+.env-row-refresh {
+  background: none; border: 0; color: var(--faint); cursor: pointer;
+  font-size: 12px; padding: 0 2px; line-height: 1; opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.env-row:hover .env-row-refresh, .env-row.selected .env-row-refresh { opacity: 1; }
+.env-row-refresh:hover:not(:disabled) { color: var(--accent-dim); }
+.env-row-refresh:disabled { opacity: 0.3; cursor: default; }
+
+.env-probed-at { color: var(--faint); font-size: 11px; }
+
+/* Plans re-probe everything, so they are never instant. Show the work instead of a dead pane. */
+.env-working { display: flex; gap: 12px; align-items: flex-start; padding: 8px 2px; }
+.env-working .env-spinner { width: 13px; height: 13px; margin-top: 3px; }
+.env-working-title { font-size: 13px; color: var(--text); margin-bottom: 4px; }
+
+/* Configs a layer manages, each expandable to YAML. */
+.env-resources { display: flex; flex-direction: column; gap: 3px; }
+.env-resource { border: 1px solid var(--border-soft); border-radius: 5px; overflow: hidden; }
+.env-resource-head {
+  display: grid; grid-template-columns: 10px 130px 1fr auto 14px;
+  gap: 8px; align-items: center; width: 100%;
+  background: var(--panel-2); border: 0; color: var(--text);
+  font: inherit; font-size: 12px; text-align: left; padding: 6px 9px; cursor: pointer;
+}
+.env-resource-head:hover { background: var(--accent-tint); }
+.env-res-kind { color: var(--accent-dim); overflow: hidden; text-overflow: ellipsis; }
+.env-res-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.env-res-ns, .env-res-caret { color: var(--faint); font-size: 11px; }
+
+/* Drift at a glance: applied is quiet, anything else wants attention. */
+.env-res-state { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.env-res-state.applied   { background: var(--green); }
+.env-res-state.modified  { background: var(--amber); }
+.env-res-state.missing   { background: var(--red); }
+.env-res-state.live-only { background: var(--accent-dim); }
+.env-res-state.unknown   { background: var(--faint); }
+
+.env-res-yaml {
+  margin: 0; padding: 10px; background: var(--bg);
+  border-top: 1px solid var(--border-soft);
+  font-size: 11px; line-height: 1.5; color: var(--muted);
+  max-height: 340px; overflow: auto; white-space: pre; word-break: normal;
+}
+
+/* Env marker, always present in the timestamp cell. A row that COULD have an environment and does
+   not is information, and a placeholder keeps the column from shifting when one appears. */
+.ts-with-env { display: inline-flex; align-items: center; gap: 8px; }
+
+.env-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; flex-shrink: 0;
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 5px; cursor: pointer; padding: 0; font-size: 12px; line-height: 1;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.env-btn:hover { border-color: var(--accent-dim); background: rgba(var(--accent-dim-rgb), 0.14); }
+.env-btn-icon { font-size: 12px; }
+
+.env-btn.empty {
+  color: var(--faint); opacity: 0.35; cursor: default;
+  background: none; border-style: dashed;
+}
+
+/* ---------- code peek (file at a pinned ref, or the working tree — labeled) ---------- */
+
+.code-peek { max-height: calc(100vh - 60px); }
+.code-peek h2 { font-family: var(--mono); font-size: 14px; }
+.code-peek-line { color: var(--faint); }
+
+.code-peek-ref { font-family: var(--mono); font-size: 11px; }
+.code-peek-ref.pinned { color: var(--green); }
+/* Unpinned is a warning, not a style choice: what you see may not be what the claim was made
+   against. */
+.code-peek-ref.unpinned { color: var(--amber); }
+.code-peek-trunc { color: var(--faint); font-size: 11px; }
+
+.code-peek-body { overflow: auto; min-height: 0; padding: 0 14px 14px; }
+
+.code-peek-table {
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  width: 100%;
+}
+.code-peek-num {
+  color: var(--faint);
+  text-align: right;
+  padding: 0 12px 0 4px;
+  user-select: none;
+  white-space: nowrap;
+  width: 1%;
+  vertical-align: top;
+}
+.code-peek-src { white-space: pre; }
+.code-peek-target { background: rgba(var(--accent-dim-rgb), 0.16); }
+.code-peek-target .code-peek-num { color: var(--accent-dim); font-weight: 600; }
+
+/* ---------- code peek: match Ashish's VS Code (Rosé Pine Moon, Fira Code, tabSize 2) --------- */
+
+/* Undo the dashboard's generic `tbody td` styling (10px padding + row borders) — built for data
+   tables, catastrophic for code: it tripled the line pitch and drew a rule under every line. */
+.code-peek-table tbody td {
+  padding: 0;
+  border-bottom: 0;
+  vertical-align: top;
+}
+.code-peek-table .code-peek-num {
+  padding: 0 14px 0 6px;
+}
+
+.code-peek-body {
+  /* Rosé Pine Moon base, distinct from the dashboard's own (main-variant) panel color. */
+  background: #232136;
+}
+.code-peek-table {
+  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;        /* editor.fontSize default */
+  line-height: 1.5;       /* ≈ VS Code's computed line height at this size */
+  tab-size: 2;            /* editor.tabSize: 2 — Go's real tabs were rendering at 8 */
+  color: #e0def4;         /* text */
+}
+.code-peek-table .code-peek-num { color: #6e6a86; }              /* muted */
+.code-peek .code-peek-target { background: #393552; }            /* overlay */
+.code-peek .code-peek-target .code-peek-num { color: #c4a7e7; }  /* iris */
+
+/* Token colors per rose-pine/vscode (Moon variant), scoped so the markdown views keep theirs. */
+.code-peek .hljs-keyword,
+.code-peek .hljs-selector-tag,
+.code-peek .hljs-meta { color: #3e8fb0; }                        /* pine — func, return, if */
+.code-peek .hljs-string,
+.code-peek .hljs-regexp { color: #f6c177; }                      /* gold — strings */
+.code-peek .hljs-title,
+.code-peek .hljs-title.function_ { color: #ea9a97; }             /* rose — functions */
+.code-peek .hljs-type,
+.code-peek .hljs-built_in,
+.code-peek .hljs-class .hljs-title { color: #9ccfd8; }           /* foam — types */
+.code-peek .hljs-number,
+.code-peek .hljs-literal,
+.code-peek .hljs-symbol { color: #c4a7e7; }                      /* iris — numbers, true/nil */
+.code-peek .hljs-comment,
+.code-peek .hljs-quote { color: #6e6a86; font-style: italic; }   /* muted italic */
+.code-peek .hljs-attr,
+.code-peek .hljs-variable,
+.code-peek .hljs-params { color: #e0def4; }                      /* text */
+.code-peek .hljs-punctuation,
+.code-peek .hljs-operator { color: #908caa; }                    /* subtle */
+
+/* ---------- code ontology (codont) ---------- */
+
+.codont-overlay { max-height: calc(100vh - 40px); height: calc(100vh - 40px); }
+/* Full width: the diagram is the whole surface now that steering happens in the terminal. */
+.codont-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 0 14px 14px;
+}
+.codont-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.codont-tabs {
+  display: flex; gap: 4px; padding: 8px 8px 0; border-bottom: 1px solid var(--border-soft);
+  flex-wrap: wrap; align-items: center;
+}
+.codont-tabbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; padding-bottom: 5px; }
+.codont-broken-count { color: var(--red); font-size: 11.5px; }
+.codont-panel-btn {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--accent-dim); font: inherit; font-size: 11.5px; padding: 3px 9px; cursor: pointer;
+}
+.codont-panel-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+.codont-empty { padding: 18px; max-width: 640px; }
+.codont-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--border); border-bottom: none;
+  border-radius: 6px 6px 0 0; color: var(--muted); font: inherit; font-size: 12px;
+  padding: 5px 10px; cursor: pointer;
+}
+.codont-tab.active { color: var(--text); background: var(--panel-2); border-color: var(--accent-dim); }
+.codont-tab.add { color: var(--accent-dim); border-style: dashed; }
+.codont-tab-err { color: var(--red); font-weight: 700; }
+
+.codont-svg { flex: 1; width: 100%; min-height: 0; cursor: grab; background: var(--panel); }
+.codont-svg:active { cursor: grabbing; }
+
+.codont-node rect {
+  fill: var(--panel-2);
+  stroke: var(--border-strong);
+  stroke-width: 1.2;
+}
+.codont-node { cursor: pointer; }
+.codont-node:hover rect { stroke: var(--accent-dim); }
+/* A failed verification renders, visibly broken — never silently absent, never confidently solid. */
+.codont-node.broken rect { stroke: var(--red); stroke-dasharray: 5 3; }
+.codont-node.broken .codont-label { fill: var(--red); }
+.codont-label { fill: var(--text); font-family: var(--mono); font-size: 12px; }
+.codont-pkg { fill: var(--faint); font-family: var(--mono); font-size: 9px; }
+
+.codont-badge circle { fill: var(--panel); stroke: var(--accent-dim); stroke-width: 1.2; }
+.codont-badge text { fill: var(--accent-dim); font-family: var(--mono); font-size: 10px; text-anchor: middle; font-style: italic; }
+.codont-badge.struct text { font-style: normal; }
+.codont-badge { cursor: pointer; }
+.codont-badge:hover circle { stroke: var(--accent); }
+
+.codont-edge { fill: none; stroke: var(--faint); stroke-width: 1.3; }
+.codont-edge.calls { stroke: var(--muted); }
+.codont-edge.then { stroke-dasharray: 4 4; }
+.codont-edge.concurrent { stroke-dasharray: 2 4; }
+.codont-edge.back { stroke-dasharray: 2 3; opacity: 0.7; }
+.codont-edge.broken { stroke: var(--red); }
+.codont-arrowhead { fill: var(--muted); }
+.codont-concurrent-dot { fill: var(--faint); }
+
+.codont-context { width: min(860px, 100%); max-height: 84vh; display: flex; flex-direction: column; }
+.codont-context h1, .codont-context h2 { font-size: 14px; }
+
+/* Ontology embedded in the terminal, View-File style: fills the overlay body while the PTY stays
+   mounted (hidden) underneath. */
+.term-codont-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.term-codont-view .codont-body { flex: 1; min-height: 0; padding: 10px 0 0; }

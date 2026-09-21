@@ -1,7 +1,9 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
-import type { Chore, Scope, TerminalTarget } from '../types';
+import type { Chore, CodontBinding, EnvBinding, Scope, TerminalTarget } from '../types';
 import { EditOverlay } from './EditOverlay';
+import { EnvButton, bindingForSessions, useEnvBindings } from './EnvButton';
+import { CodontButton, codontForSessions, useCodontBindings } from './CodontButton';
 import { ReadOverlay } from './ReadOverlay';
 import { RunSessionButton } from './RunSessionButton';
 import { ConfirmDialog, copyText, formatTimestamp, Pager, Panel, toast } from './ui';
@@ -34,13 +36,19 @@ export function ChoresPanel({
   openTerminals,
   onRunSession,
   onRestoreTerminal,
+  onOpenEnv,
+  onOpenCodont,
 }: {
   scope: Scope;
   refreshSignal?: number;
   openTerminals?: TerminalTarget[] | null;
   onRunSession: (t: TerminalTarget) => void;
   onRestoreTerminal: (t: TerminalTarget) => void;
+  onOpenEnv: (b: EnvBinding) => void;
+  onOpenCodont: (b: CodontBinding) => void;
 }) {
+  const envBindings = useEnvBindings();
+  const codontBindings = useCodontBindings();
   const [items, setItems] = useState<Chore[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -150,7 +158,15 @@ export function ChoresPanel({
                 return (
                   <Fragment key={c.filename}>
                     <tr className="row clickable-row" onClick={() => setReading(c)}>
-                      <td className="cell-ts">{formatTimestamp(c.mtime)}</td>
+                      {/* Env marker sits with the timestamp, on the left: it describes the row's
+                          session, not an action you take on the row. */}
+                      <td className="cell-ts">
+                        <span className="ts-with-env" onClick={(e) => e.stopPropagation()}>
+                          <EnvButton binding={bindingForSessions(envBindings, c.sessions)} onOpen={onOpenEnv} />
+                          <CodontButton binding={codontForSessions(codontBindings, c.sessions)} onOpen={onOpenCodont} />
+                          <span>{formatTimestamp(c.mtime)}</span>
+                        </span>
+                      </td>
                       <td className="cell-file">{c.filename}</td>
                       <td className="cell-name">
                         <div className="name-line">
