@@ -15,7 +15,7 @@ import { spawn } from 'node:child_process';
 import { WebSocket } from 'ws';
 import puppeteer from 'puppeteer-core';
 
-const BRAVE = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
+const BRAVE = process.env.DEVBOARD_BROWSER || '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
 const HOME = os.homedir();
 const PORT = Number(process.env.DEVBOARD_VERIFY_PORT || 5179);
 const BASE = `http://127.0.0.1:${PORT}`;

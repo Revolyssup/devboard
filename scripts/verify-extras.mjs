@@ -5,7 +5,7 @@
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 
-const BRAVE = '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
+const BRAVE = process.env.DEVBOARD_BROWSER || '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser';
 const OUT = process.env.SHOTS || '/tmp/devboard-shots';
 fs.mkdirSync(OUT, { recursive: true });
 

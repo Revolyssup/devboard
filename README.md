@@ -23,10 +23,82 @@ Both sections have the same shape; they differ only in which directories back th
 | Chore commands | `/start-chore`, `/end-chore` | `/start-personal-chore`, `/end-personal-chore` |
 | Extra button | — | Learning Progress Report |
 
+## Setup (new machine)
+
+devboard is only half the system: the other half is a set of agent skills (`/start-chore`,
+`/handoff`, …) that write the files it displays. Everything needed ships in this repo under
+[`agent-kit/`](agent-kit/), and one script installs it all.
+
+**Prerequisites:** macOS or Linux, Node.js **≥ 20.19** (`node -v`), git,
+[Claude Code](https://docs.claude.com/en/docs/claude-code) (`claude` on `PATH`) and/or
+[Codex CLI](https://github.com/openai/codex) (`codex`), plus `ps` and `lsof` (preinstalled on macOS).
+
+```bash
+git clone git@github.com:Revolyssup/devboard.git ~/dev/devboard
+cd ~/dev/devboard
+./scripts/install.sh      # skills + shared contract + data dirs + npm install + build
+npm start                 # → http://localhost:5178
+```
+
+Then **restart any open Claude/Codex sessions** so they load the new skills, and try it: in any
+repo run `claude`, type `/start-chore fix the flaky test in foo`, and watch it appear under
+Work → Active chores within ~10s.
+
+What `install.sh` does (it is idempotent — re-run it after every `git pull`):
+
+| Step | Result |
+| --- | --- |
+| Data dirs | Creates `~/.agents/data/{learnings,chores}/{work,personal}` and `~/.agents/data/sessions`, each paired with its legacy `~/.claude/...` path by a symlink (skills write through either path; both must be the same dir). Seeds empty `index.txt` files with the right headers. Never moves or deletes existing data. |
+| Shared contract | `agent-kit/agents/` → `~/.agents/AGENTS.md` + `~/.agents/specs/*.md` |
+| Claude skills | `agent-kit/claude/skills/*` → `~/.claude/skills/` |
+| Codex skill | `agent-kit/codex/skills/agent-memory` → `~/.codex/skills/` (skipped if Codex isn't installed) |
+| App | `npm run install:all && npm run build` |
+
+Flags: `--link` symlinks skills/specs into this checkout instead of copying (so `git pull` alone
+updates them — don't move the repo afterwards); `--force` replaces skill/spec files you've edited
+locally (the old one is kept as `*.bak.<timestamp>`; without it they are left alone with a
+warning); `--no-npm` does only the agent-side setup.
+
+### What's in `agent-kit/`
+
+```
+agent-kit/
+  agents/AGENTS.md                 shared data contract every skill reads first
+  agents/specs/                    handoff.md, start-chore.md, end-chore.md (file + index formats)
+  claude/skills/
+    start-chore, end-chore                    Work → Active chores
+    start-personal-chore, end-personal-chore  Personal → Active chores
+    resume-chore                   used by the dashboard's ❯ Run button on a chore row
+    handoff                        writes work learnings (+ index row) → Work learnings table
+    learn-from-past                reads the learnings index back into a session
+  codex/skills/agent-memory/       the same workflows for Codex (`run /start-chore …`, `resume chore …`)
+```
+
+### Optional pieces
+
+- **Personal learnings + Learning Progress Report.** The Personal learnings table reads
+  `~/.agents/data/learnings/personal/*.md` (YAML front-matter: `date`, `track`, `subtype`,
+  `topic`, `outcome`, `confidence`, `session_id`, `directory`), and the report button opens the
+  newest HTML in `~/dev/learning-shit/reports` (`DEVBOARD_REPORTS_DIR` to change it). Those are
+  produced by a personal practice framework that is not part of this kit — without it the table
+  and button simply show their empty state. Personal *chores* work fully.
+- **Code Ontology (`/codont`) and environments (`/start-env`)** live on the unmerged
+  `codont-main-agent-writes` branch and are not part of `master` or this kit.
+
+### Troubleshooting
+
+- `posix_spawnp failed` when opening a terminal → `node scripts/fix-node-pty-perms.mjs`
+  (normally runs on `postinstall`; see the node-pty note below).
+- Skills don't show up in `/` autocomplete → restart the session; check
+  `ls ~/.claude/skills/start-chore/SKILL.md`.
+- Install warns "exists and differs" → you already have a skill by that name; diff it against
+  `agent-kit/` and re-run with `--force` if you want the packaged one.
+- Active dots never go green → `lsof` must be on `PATH` for the server process.
+
 ## Run it
 
 ```bash
-npm run install:all     # once — installs server + web deps
+npm run install:all     # once — installs server + web deps (install.sh already did this)
 npm run dev             # api on :5178, vite dev server on :5177  → open http://localhost:5177
 ```
 
@@ -114,8 +186,9 @@ ever exists, it is rendered read-only in an overlay instead.
 
 ## Agent skills
 
-Installed into `~/.claude/skills` for Claude and `~/.codex/skills` for Codex. The shared contract
-is under `~/.agents/specs`. Two matched pairs, one per section; each pair owns exactly one
+Source of truth is `agent-kit/` in this repo; `scripts/install.sh` installs them into
+`~/.claude/skills` for Claude and `~/.codex/skills` for Codex, and the shared contract into
+`~/.agents/specs`. Two matched pairs, one per section; each pair owns exactly one
 directory and never writes to the other's:
 
 - **`/start-chore <work item>`** — job work. Creates `~/.agents/data/chores/work/<date>-<slug>.md` with the
@@ -242,7 +315,8 @@ scripts/                headless end-to-end verifiers (see below)
 ## Verification
 
 `scripts/` holds the headless end-to-end runs (puppeteer-core against a local Chromium-based
-browser; the path is set at the top of each script):
+browser — Brave by default; point `DEVBOARD_BROWSER` at any Chrome/Chromium binary, e.g.
+`/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`):
 
 ```bash
 npm run build                            # the suites hit :5178, which serves web/dist
