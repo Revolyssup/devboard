@@ -22,10 +22,10 @@ session reference when possible:
 ```yaml
 agent_sessions:
   - agent: claude
-    id: 89f06ffa-ec27-42b9-af92-a5b3e39fc91f
+    id: 00000000-0000-4000-8000-000000000001
     directory: /Users/you/dev/some-repo
   - agent: codex
-    id: 01a05bf5-61cd-7391-81e1-a38168ec2dc4
+    id: 00000000-0000-7000-8000-000000000002
     directory: /Users/you/dev/some-repo
 ```
 
