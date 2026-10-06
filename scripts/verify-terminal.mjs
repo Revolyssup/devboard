@@ -219,9 +219,14 @@ try {
     return [r.status === 400 && r.body.code === 'DIR_OUTSIDE_ROOTS', r.body.code];
   })()));
 
-  check('unknown session → 400 NO_TRANSCRIPT', ...(await (async () => {
+  check('missing transcript → 200 fresh session seeded from the file', ...(await (async () => {
     const r = await post({ ...valid(), sessionId: '99999999-8888-4777-8666-555555555555' });
-    return [r.status === 400 && r.body.code === 'NO_TRANSCRIPT', r.body.code];
+    const ok =
+      r.status === 200 &&
+      !!r.body.ticket &&
+      r.body.sessionId === null &&
+      r.body.warnings?.[0]?.code === 'TRANSCRIPT_MISSING';
+    return [ok, `${r.status} ${r.body.code || r.body.warnings?.[0]?.code}`];
   })()));
 
   check('traversal filename → 400', ...(await (async () => {

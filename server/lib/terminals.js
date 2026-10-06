@@ -324,7 +324,23 @@ export async function preflight(spec) {
         `session ${sessionId} was last used from a different directory — its transcript lives under ${occupancy.projectSlug}, not ${slug}`
       );
     }
-    throw fail(400, 'NO_TRANSCRIPT', `no transcript for session ${sessionId} under ${slug}`);
+    // The transcript is gone for good (Claude prunes transcripts past `cleanupPeriodDays`), but the
+    // learning/chore file still carries the state. Start a fresh session seeded from that file; it
+    // gets bound to the row like any other new session.
+    const fresh = await preflightNew({
+      scope,
+      agent,
+      newKind: kind,
+      filename,
+      directory: cwd,
+      cols,
+      rows,
+    });
+    fresh.warnings.unshift({
+      code: 'TRANSCRIPT_MISSING',
+      message: `no transcript for session ${sessionId} under ${slug} (likely pruned) — started a fresh ${agent} session seeded from ${filename}`,
+    });
+    return fresh;
   }
   if (transcriptPath) {
     try {
