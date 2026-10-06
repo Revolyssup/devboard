@@ -527,6 +527,67 @@ const send = (ws, msg) => {
   if (ws.readyState === 1) ws.send(JSON.stringify(msg));
 };
 
+// --- agent activity (busy vs waiting-for-you) --------------------------------------------------
+// ~/.claude/hooks/claude-notifier-on-*.js already write every Stop/UserPromptSubmit/
+// PermissionRequest/AskUserQuestion event — for Claude and Codex alike — to one shared signal
+// file as "<reason> <ts> <sessionId> ...". We tail that instead of inventing a second notifier:
+// "prompt" means the agent just started working, "done"/"input"/"question" mean it is blocked on
+// the human again. "subagent_done" fires mid-turn (the main agent is still working) so it is
+// deliberately not in either set.
+const AGENT_BUSY_REASONS = new Set(['prompt']);
+const AGENT_IDLE_REASONS = new Set(['done', 'input', 'question']);
+
+function parseAgentSignal(raw) {
+  const [reason, , sessionId] = String(raw).trim().split(/\s+/);
+  return { reason, sessionId: sessionId && sessionId !== '-' ? sessionId : null };
+}
+
+function agentStateForReason(reason) {
+  if (AGENT_BUSY_REASONS.has(reason)) return 'busy';
+  if (AGENT_IDLE_REASONS.has(reason)) return 'idle';
+  return null;
+}
+
+/** Push a state onto every open terminal (Claude or Codex) resuming this session id, if any. */
+function applyAgentState(sessionId, state) {
+  const sid = String(sessionId).toLowerCase();
+  for (const agent of AGENTS) {
+    const terminalId = bySession.get(sessionKey(agent, sid));
+    const rec = terminalId && registry.get(terminalId);
+    if (!rec || rec.agentState === state) continue;
+    rec.agentState = state;
+    send(rec.ws, { t: 'agent-state', state });
+  }
+}
+
+// A resumed/attached terminal is a *freshly spawned* process — even if the session id has a long
+// history elsewhere, this particular pty has done nothing yet, so it always starts 'idle'
+// (see the `agentState: 'idle'` literal at rec creation below). Only a live signal for this exact
+// terminal's session, from here on, ever moves it to 'busy'.
+let lastAgentSignalRaw = null;
+function handleAgentSignalChange() {
+  let raw;
+  try {
+    raw = fs.readFileSync(config.agentSignalFile, 'utf8');
+  } catch {
+    return;
+  }
+  if (raw === lastAgentSignalRaw) return;
+  lastAgentSignalRaw = raw;
+  const { reason, sessionId } = parseAgentSignal(raw);
+  const state = reason && agentStateForReason(reason);
+  if (!state || !sessionId) return;
+  applyAgentState(sessionId, state);
+}
+
+// Best-effort: older deployments or a fresh machine may not have the notifier hooks installed at
+// all, and that must not stop terminals from working — busy/waiting just stays at its default.
+try {
+  fs.watch(config.agentSignalFile, { persistent: false }, handleAgentSignalChange).unref?.();
+} catch {
+  /* no signal file on this machine */
+}
+
 /**
  * Spawn the pty for a redeemed ticket and wire it to the socket.
  * PTY output goes over **binary** frames: JSON-wrapping it would split multi-byte UTF-8 across
@@ -619,6 +680,9 @@ export function attach(ws, entry) {
     firstInput: '',
     inputLine: '',
     discoveryTimer: null,
+    // Always starts 'idle' — a freshly spawned pty hasn't done anything yet regardless of what
+    // this session id was doing elsewhere in the past. Only a live signal moves it to 'busy'.
+    agentState: 'idle',
   };
   registry.set(terminalId, rec);
   reservations.delete(terminalId); // the registry owns the session hold from here
@@ -638,6 +702,7 @@ export function attach(ws, entry) {
     rows,
     argv: [cmd.bin, ...cmd.args],
   });
+  send(ws, { t: 'agent-state', state: rec.agentState });
 
   if (kind === 'new') watchNewSession(rec, Number(startedAt || Date.now()));
   if (kind === 'new' && newKind === 'chore' && filename) {

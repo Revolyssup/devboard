@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api';
-import type { Learning, ProgressReport, Scope, TerminalTarget } from '../types';
+import type { CodontBinding, EnvBinding, Learning, ProgressReport, Scope, TerminalTarget } from '../types';
 import { ChoresPanel } from './ChoresPanel';
 import { EditOverlay } from './EditOverlay';
+import { EnvOverlay } from './EnvOverlay';
+import { CodontOverlay } from './CodontOverlay';
 import { LearningsTable } from './LearningsTable';
 import { Markdown } from './Markdown';
 import { NewSessionDialog } from './NewSessionDialog';
@@ -12,6 +14,7 @@ import { TerminalOverlay } from './TerminalOverlay';
 import { ConfirmDialog, Pager, Panel, toast, useEscape } from './ui';
 
 const PAGE_SIZE = 8;
+type TerminalEntry = { uid: string; target: TerminalTarget; protectUnload: boolean };
 
 const COPY: Record<Scope, { title: string; sub: string }> = {
   work: {
@@ -43,6 +46,10 @@ export function LearningsSection({
   const [deleting, setDeleting] = useState<Learning | null>(null);
   const [searching, setSearching] = useState(false);
   const [newSession, setNewSession] = useState<'learning' | 'chore' | null>(null);
+  // The environment a row asked to open. Null means no environment view is up — there is no
+  // global entry point, and nothing probes until one of these is set.
+  const [envBinding, setEnvBinding] = useState<EnvBinding | null>(null);
+  const [codontBinding, setCodontBinding] = useState<CodontBinding | null>(null);
   // Multiple sessions can run in parallel (backend caps it, see config.maxTerminals). At most one
   // is on screen at a time — `activeUid` — everything else in `terminals` sits minimized with its
   // PTY/websocket still alive underneath, exactly like the single-terminal case used to.
@@ -50,11 +57,15 @@ export function LearningsSection({
   // Each entry gets a `uid` at open time that never changes, independent of `target` (which does
   // change — a new session gets its sessionId/filename patched in after the fact). React's `key`
   // is pinned to `uid` so that patch never remounts the TerminalOverlay and kills its websocket.
-  const [terminals, setTerminals] = useState<{ uid: string; target: TerminalTarget }[]>([]);
+  const [terminals, setTerminals] = useState<TerminalEntry[]>([]);
   const [activeUid, setActiveUid] = useState<string | null>(null);
   const [terminalFullscreen, setTerminalFullscreen] = useState(false);
   const [report, setReport] = useState<ProgressReport | null>(null);
   const [choreRefresh, setChoreRefresh] = useState(0);
+  // Persistent "a background session finished" banners — distinct from the auto-dismissing
+  // toast stack. Only ever holds a `uid`; target/agent info and dismissal are resolved live at
+  // render time (below) so a notice never shows stale data or outlives its terminal.
+  const [notices, setNotices] = useState<{ id: string; uid: string }[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -129,6 +140,24 @@ export function LearningsSection({
       : `${t.agent}:${t.sessionId}`;
 
   const openTargets = terminals.map((o) => o.target);
+  const terminalTabs = terminals.map(({ uid, target }) => ({ uid, target }));
+  const hasUnloadProtectedTerminal = terminals.some((o) => o.protectUnload);
+  // Drop notices whose terminal already closed, and ones for the terminal you're currently on —
+  // by any means, not just this banner's own button (e.g. you switched to it via its row instead).
+  const visibleNotices = notices
+    .map((n) => ({ ...n, entry: terminals.find((o) => o.uid === n.uid) }))
+    .filter((n): n is typeof n & { entry: TerminalEntry } => Boolean(n.entry) && n.uid !== activeUid);
+
+  useEffect(() => {
+    if (!hasUnloadProtectedTerminal) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnloadProtectedTerminal]);
 
   const openTerminal = (target: TerminalTarget) => {
     const key = terminalKey(target);
@@ -139,7 +168,7 @@ export function LearningsSection({
       return;
     }
     const uid = crypto.randomUUID();
-    setTerminals((prev) => [...prev, { uid, target }]);
+    setTerminals((prev) => [...prev, { uid, target, protectUnload: true }]);
     setActiveUid(uid);
     setTerminalFullscreen(false);
   };
@@ -148,6 +177,26 @@ export function LearningsSection({
     const key = terminalKey(target);
     const match = terminals.find((o) => terminalKey(o.target) === key);
     if (match) setActiveUid(match.uid);
+  };
+
+  const selectFullscreenTerminal = (uid: string) => {
+    setActiveUid(uid);
+    setTerminalFullscreen(true);
+  };
+
+  // A terminal you're already looking at doesn't need a banner telling you to go look at it.
+  const handleAgentFinished = (uid: string) => {
+    setNotices((prev) => (prev.some((n) => n.uid === uid) ? prev : [...prev, { id: crypto.randomUUID(), uid }]));
+  };
+
+  const dismissNotice = (id: string) => setNotices((prev) => prev.filter((n) => n.id !== id));
+
+  const goToNoticeTerminal = (id: string, uid: string) => {
+    // Switching activeUid is enough to minimize whatever was on screen — only one terminal is
+    // ever non-minimized at a time (see `isActive` in the render below).
+    setActiveUid(uid);
+    setTerminalFullscreen(false);
+    dismissNotice(id);
   };
 
   const refreshScope = () => {
@@ -169,6 +218,14 @@ export function LearningsSection({
     setTerminals((prev) =>
       prev.map((o) => (o.uid === uid ? { ...o, target: { ...o.target, ...patch } } : o))
     );
+  };
+
+  const setTerminalUnloadProtection = (uid: string, protectUnload: boolean) => {
+    setTerminals((prev) => {
+      const current = prev.find((o) => o.uid === uid);
+      if (!current || current.protectUnload === protectUnload) return prev;
+      return prev.map((o) => (o.uid === uid ? { ...o, protectUnload } : o));
+    });
   };
 
   return (
@@ -194,19 +251,22 @@ export function LearningsSection({
               only covers in-flight new sessions that aren't tied to a row yet. */}
           {terminals
             .filter((o) => o.uid !== activeUid && !o.target.filename)
-            .map((o) => (
-              <button
-                key={o.uid}
-                className="btn run-btn running"
-                title="Restore session"
-                onClick={() => setActiveUid(o.uid)}
-              >
-                <span className="run-label">❯ Running</span>
-                <span className="dock-session">
-                  {o.target.agent}:{o.target.sessionId ? `${o.target.sessionId.slice(0, 8)}…` : 'new'}
-                </span>
-              </button>
-            ))}
+            .map((o) => {
+              const busy = o.target.agentState === 'busy';
+              return (
+                <button
+                  key={o.uid}
+                  className={`btn run-btn running ${busy ? 'busy' : 'idle'}`}
+                  title="Restore session"
+                  onClick={() => setActiveUid(o.uid)}
+                >
+                  <span className="run-label">❯ Running</span>
+                  <span className="dock-session">
+                    {o.target.agent}:{o.target.sessionId ? `${o.target.sessionId.slice(0, 8)}…` : 'new'}
+                  </span>
+                </button>
+              );
+            })}
           <button className="btn primary" onClick={() => setSearching(true)}>
             ⌕ Search
           </button>
@@ -232,6 +292,8 @@ export function LearningsSection({
           onRunSession={openTerminal}
           openTerminals={openTargets}
           onRestoreTerminal={restoreTerminal}
+          onOpenEnv={setEnvBinding}
+          onOpenCodont={setCodontBinding}
         />
         <Pager
           page={page}
@@ -249,6 +311,8 @@ export function LearningsSection({
         openTerminals={openTargets}
         onRunSession={openTerminal}
         onRestoreTerminal={restoreTerminal}
+        onOpenEnv={setEnvBinding}
+        onOpenCodont={setCodontBinding}
       />
 
       {terminals.map(({ uid, target }) => {
@@ -265,9 +329,38 @@ export function LearningsSection({
             onChoreGone={refreshScope}
             onChoreChanged={refreshScope}
             onTargetUpdate={(patch) => updateTerminal(uid, patch)}
+            onProtectUnloadChange={(protect) => setTerminalUnloadProtection(uid, protect)}
+            onAgentFinished={() => handleAgentFinished(uid)}
+            onOpenEnv={setEnvBinding}
+            terminalTabs={terminalTabs}
+            activeTerminalUid={activeUid}
+            onSelectTerminal={selectFullscreenTerminal}
           />
         );
       })}
+
+      {visibleNotices.length > 0 && (
+        <div className="session-notice-stack">
+          {visibleNotices.map((n) => (
+            <div className="session-notice" key={n.id}>
+              <div className="session-notice-body">
+                <span className="session-notice-glyph">●</span>
+                <span className="session-notice-text">
+                  <strong>{n.entry.target.title || n.entry.target.agent}</strong> is waiting for you
+                </span>
+              </div>
+              <div className="session-notice-actions">
+                <button className="btn sm" onClick={() => goToNoticeTerminal(n.id, n.uid)}>
+                  Go to Terminal
+                </button>
+                <button className="btn sm ghost" onClick={() => dismissNotice(n.id)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {reading && (
         <ReadOverlay
@@ -309,6 +402,14 @@ export function LearningsSection({
       )}
 
       {searching && <SearchOverlay scope={scope} onClose={() => setSearching(false)} />}
+
+      {envBinding && (
+        <EnvOverlay binding={envBinding} onClose={() => setEnvBinding(null)} />
+      )}
+
+      {codontBinding && (
+        <CodontOverlay binding={codontBinding} onClose={() => setCodontBinding(null)} />
+      )}
 
       {newSession && (
         <NewSessionDialog

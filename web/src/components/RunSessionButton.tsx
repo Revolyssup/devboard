@@ -118,9 +118,12 @@ export function RunSessionButton({
   );
 
   if (running) {
+    // 'busy' = the agent is actively working (green); anything else reads as idle (rosé). Color
+    // only — no label — so a wrong guess is a muted hint, not a confident-sounding wrong claim.
+    const busy = matchedTarget?.agentState === 'busy';
     return (
       <button
-        className="btn sm run-btn running"
+        className={`btn sm run-btn running ${busy ? 'busy' : 'idle'}`}
         title={`Restore ${running.agent} ${running.id}`}
         onClick={() => matchedTarget && onRestore?.(matchedTarget)}
       >

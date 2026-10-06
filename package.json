@@ -12,12 +12,14 @@
     "start": "node server/index.js",
     "install:all": "npm install && npm --prefix web install",
     "postinstall": "node scripts/fix-node-pty-perms.mjs",
-    "verify": "node scripts/verify-ui.mjs && node scripts/verify-extras.mjs && node scripts/verify-personal-chores.mjs && node scripts/verify-mutations.mjs && node scripts/verify-terminal.mjs"
+    "verify": "node scripts/verify-ui.mjs && node scripts/verify-extras.mjs && node scripts/verify-personal-chores.mjs && node scripts/verify-mutations.mjs && node scripts/verify-terminal.mjs && node scripts/verify-env.mjs && node scripts/verify-code.mjs && node scripts/verify-codont.mjs",
+    "env": "node scripts/envctl.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
     "node-pty": "^1.1.0",
-    "ws": "^8.21.3"
+    "ws": "^8.21.3",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

@@ -283,7 +283,7 @@ because `directory` comes from a file on disk.
 | --- | --- | --- |
 | `DEVBOARD_CLAUDE_BIN` | `claude` | binary to resume with; the verifier points it at a stand-in |
 | `DEVBOARD_TERMINAL_ROOTS` | `$HOME` | `:`-separated allowlist for the spawn cwd |
-| `DEVBOARD_MAX_TERMINALS` | `3` | concurrent terminals |
+| `DEVBOARD_MAX_TERMINALS` | `10` | concurrent terminals |
 | `DEVBOARD_TERMINAL_IDLE_MS` | `1800000` | idle timeout |
 | `DEVBOARD_ALLOWED_ORIGINS` | localhost:5177/5178 | websocket `Origin` allowlist |
 

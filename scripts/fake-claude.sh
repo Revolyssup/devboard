@@ -34,6 +34,15 @@ read_size
 emit_size
 trap 'read_size; emit_size' WINCH
 
+if [ "$DEVBOARD_FAKE_CLEAR_SCREEN" = "1" ]; then
+  printf '\033[?1049h'
+  for i in $(seq 1 80); do
+    echo "SCROLLBACK-LINE-$i"
+  done
+  printf '\033[2J\033[H'
+  echo "FAKE-CLAUDE after-clear"
+fi
+
 echo "FAKE-CLAUDE ready"
 printf '> '
 
