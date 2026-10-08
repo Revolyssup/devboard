@@ -14,6 +14,7 @@ import { terminalRouter } from './routes/terminal.js';
 import { envRouter } from './routes/env.js';
 import { codeRouter } from './routes/code.js';
 import { codontRouter } from './routes/codont.js';
+import { designRouter } from './routes/design.js';
 import { subscribe as subscribeRun } from './lib/env/executor.js';
 import { sessionSnapshot } from './lib/sessions.js';
 import { attach, redeemTicket, reapOrphans, shutdownAll } from './lib/terminals.js';
@@ -45,6 +46,7 @@ app.use('/api/terminal', terminalRouter);
 app.use('/api/env', envRouter);
 app.use('/api/code', codeRouter);
 app.use('/api/codont', codontRouter);
+app.use('/api/design', designRouter);
 app.use('/reports', reportsFileRouter);
 
 // Serve the built SPA when it exists (production / `npm run build`).

@@ -27,6 +27,8 @@ export interface TerminalTarget {
   /** 'busy' = the agent is working; 'idle' = it finished (or needs input) and is waiting on you.
    * Driven by ~/.claude/hooks' shared notifier signal file — see server/lib/terminals.js. */
   agentState?: 'busy' | 'idle';
+  /** Bumped to ask an open (or opening) terminal to switch to its Design view. */
+  designNonce?: number;
 }
 
 export interface TerminalTicket {

@@ -4,6 +4,7 @@ import { ActiveDots } from './ActiveDot';
 import { EnvButton, bindingForSessions, useEnvBindings } from './EnvButton';
 import { CodontButton, codontForSessions, useCodontBindings } from './CodontButton';
 import { RunSessionButton } from './RunSessionButton';
+import { DesignButton } from './DesignButton';
 import { formatTimestamp } from './ui';
 
 /**
@@ -20,6 +21,7 @@ export function LearningsTable({
   onRestoreTerminal,
   onOpenEnv,
   onOpenCodont,
+  onOpenDesign,
 }: {
   items: Learning[];
   onRead: (l: Learning) => void;
@@ -30,6 +32,7 @@ export function LearningsTable({
   onRestoreTerminal?: (t: TerminalTarget) => void;
   onOpenEnv: (b: EnvBinding) => void;
   onOpenCodont: (b: CodontBinding) => void;
+  onOpenDesign: (t: TerminalTarget) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const envBindings = useEnvBindings();
@@ -73,6 +76,16 @@ export function LearningsTable({
                   <span className="ts-with-env" onClick={(e) => e.stopPropagation()}>
                     <EnvButton binding={bindingForSessions(envBindings, l.sessions)} onOpen={onOpenEnv} />
                     <CodontButton binding={codontForSessions(codontBindings, l.sessions)} onOpen={onOpenCodont} />
+                    <DesignButton
+                      scope={l.scope}
+                      kind="learning"
+                      filename={l.filename}
+                      title={l.title}
+                      directory={l.directory}
+                      candidates={l.sessions}
+                      openTerminals={openTerminals}
+                      onOpenDesign={onOpenDesign}
+                    />
                     <span>{formatTimestamp(l.mtime)}</span>
                   </span>
                 </td>

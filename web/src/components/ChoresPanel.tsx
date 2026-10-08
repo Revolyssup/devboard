@@ -6,6 +6,7 @@ import { EnvButton, bindingForSessions, useEnvBindings } from './EnvButton';
 import { CodontButton, codontForSessions, useCodontBindings } from './CodontButton';
 import { ReadOverlay } from './ReadOverlay';
 import { RunSessionButton } from './RunSessionButton';
+import { DesignButton } from './DesignButton';
 import { ConfirmDialog, copyText, formatTimestamp, Pager, Panel, toast } from './ui';
 
 const PAGE_SIZE = 6;
@@ -38,6 +39,7 @@ export function ChoresPanel({
   onRestoreTerminal,
   onOpenEnv,
   onOpenCodont,
+  onOpenDesign,
 }: {
   scope: Scope;
   refreshSignal?: number;
@@ -46,6 +48,7 @@ export function ChoresPanel({
   onRestoreTerminal: (t: TerminalTarget) => void;
   onOpenEnv: (b: EnvBinding) => void;
   onOpenCodont: (b: CodontBinding) => void;
+  onOpenDesign: (t: TerminalTarget) => void;
 }) {
   const envBindings = useEnvBindings();
   const codontBindings = useCodontBindings();
@@ -164,6 +167,16 @@ export function ChoresPanel({
                         <span className="ts-with-env" onClick={(e) => e.stopPropagation()}>
                           <EnvButton binding={bindingForSessions(envBindings, c.sessions)} onOpen={onOpenEnv} />
                           <CodontButton binding={codontForSessions(codontBindings, c.sessions)} onOpen={onOpenCodont} />
+                          <DesignButton
+                            scope={scope}
+                            kind="chore"
+                            filename={c.filename}
+                            title={c.title}
+                            directory={c.directory}
+                            candidates={c.sessions}
+                            openTerminals={openTerminals}
+                            onOpenDesign={onOpenDesign}
+                          />
                           <span>{formatTimestamp(c.mtime)}</span>
                         </span>
                       </td>

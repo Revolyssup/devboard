@@ -173,6 +173,18 @@ export function LearningsSection({
     setTerminalFullscreen(false);
   };
 
+  /** Open (or bring forward) the row's session and switch it to its Design view. */
+  const openDesign = (target: TerminalTarget) => {
+    const key = terminalKey(target);
+    const existing = terminals.find((o) => terminalKey(o.target) === key);
+    if (existing) {
+      updateTerminal(existing.uid, { designNonce: target.designNonce });
+      setActiveUid(existing.uid);
+      return;
+    }
+    openTerminal(target);
+  };
+
   const restoreTerminal = (target: TerminalTarget) => {
     const key = terminalKey(target);
     const match = terminals.find((o) => terminalKey(o.target) === key);
@@ -294,6 +306,7 @@ export function LearningsSection({
           onRestoreTerminal={restoreTerminal}
           onOpenEnv={setEnvBinding}
           onOpenCodont={setCodontBinding}
+          onOpenDesign={openDesign}
         />
         <Pager
           page={page}
@@ -313,6 +326,7 @@ export function LearningsSection({
         onRestoreTerminal={restoreTerminal}
         onOpenEnv={setEnvBinding}
         onOpenCodont={setCodontBinding}
+        onOpenDesign={openDesign}
       />
 
       {terminals.map(({ uid, target }) => {
