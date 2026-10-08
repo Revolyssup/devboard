@@ -64,13 +64,15 @@ warning); `--no-npm` does only the agent-side setup.
 ```
 agent-kit/
   agents/AGENTS.md                 shared data contract every skill reads first
-  agents/specs/                    handoff.md, start-chore.md, end-chore.md (file + index formats)
+  agents/specs/                    handoff.md, start-chore.md, end-chore.md (file + index formats),
+                                   design-facts.md (the Design window's contract)
   claude/skills/
     start-chore, end-chore                    Work → Active chores
     start-personal-chore, end-personal-chore  Personal → Active chores
     resume-chore                   used by the dashboard's ❯ Run button on a chore row
     handoff                        writes work learnings (+ index row) → Work learnings table
     learn-from-past                reads the learnings index back into a session
+    design, verify-fact            drive the ✎ Design window (derive / verify / re-derive / prototype)
   codex/skills/agent-memory/       the same workflows for Codex (`run /start-chore …`, `resume chore …`)
 ```
 
@@ -202,9 +204,39 @@ directory and never writes to the other's:
 - **`/end-personal-chore`** — the personal counterpart; offers to capture anything durable as a
   personal learning in `~/.agents/data/learnings/personal/` before deleting.
 
+## Design (✎)
+
+Every learning and chore row, and every session terminal, has a **✎ Design** button. It opens a
+fullscreen window on top of that row's agent session:
+
+- **Left:** a plain editor for your own prose — how you think the system behaves, what you want it to
+  do, bugs, design worries, and optionally a `## Environment` section on how to test. Saved as
+  `<learning-or-chore>.design/design.md` next to the file. Agents never write it.
+- **Right:** what the session's agent derived from it, each tied to the fragments of your prose it
+  came from (dots in the editor's margin) and to code at a pinned commit:
+  - **Fact** — the code agrees (orange); green once a runtime `verify.sh` passed *and* its
+    `--control` failed.
+  - **Flag** — the code disagrees with your prose (red). Goes away when you delete those lines, or
+    via a Re-derive you ask for.
+  - **Target** — something you want. **Prototype** (with a branch name) has the agent write the
+    script first, prove it fails on base (which freezes it), then write code until it passes; the
+    target then becomes a fact with the prototype diff as its code.
+- Buttons type commands into the session's terminal (`/design derive|verify|rederive|prototype …`),
+  so there is one agent and you see every request; **❯ Terminal** takes you there to argue about a
+  specific item (`X-2: use the config with mTLS off`). `/verify-fact <which part>` creates an item
+  Derive missed.
+- The server, not the agent, runs `verify.sh`; its exit code (0 pass / 1 fail / 2 couldn't run) is
+  the result. Each item's folder is self-contained: copy it anywhere and run `./verify.sh`.
+
+Contract: `agent-kit/agents/specs/design-facts.md`. Needs the `design` and `verify-fact` skills
+(installed by `scripts/install.sh`).
+
 ## API
 
 ```
+GET    /api/design/list | state | file | diff | run      design window (see design-facts.md)
+POST   /api/design/open | items | item/update | item/remove | item/retire | request | run
+PUT    /api/design/doc                                    the prose; editor only
 GET    /api/health
 GET    /api/learnings/:scope?page=&pageSize=&sort=        scope = work | personal
 GET    /api/learnings/:scope/search?q=&page=&pageSize=

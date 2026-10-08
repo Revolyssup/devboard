@@ -5,6 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import { bindingForSessions, useEnvBindings } from './EnvButton';
 import { codontForSessions, useCodontBindings } from './CodontButton';
 import { CodontView } from './CodontOverlay';
+import { DesignView } from './DesignView';
 import { CodePeek } from './CodePeek';
 import { createCodeLinkProvider, type PeekRequest } from '../lib/codeLinkProvider';
 import type { EnvBinding, TerminalTarget } from '../types';
@@ -100,6 +101,9 @@ export function TerminalOverlay({
   // Alt-click on a file:line link in the terminal opens the pinned peek here.
   const [peek, setPeek] = useState<PeekRequest | null>(null);
   const [viewMode, setViewMode] = useState<'terminal' | 'file' | 'codont'>('terminal');
+  // The design is its own window on top of this terminal, which keeps running underneath: the
+  // window types its commands into this session.
+  const [designOpen, setDesignOpen] = useState<boolean>(Boolean(target.designNonce));
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
@@ -109,6 +113,28 @@ export function TerminalOverlay({
   const associatedFileKind = target.kind === 'new' ? target.newKind || 'learning' : target.kind;
   const associatedFilename =
     target.filename || (associatedFileKind === 'chore' ? choreFile : learningFile) || '';
+
+  const designKey =
+    associatedFilename && (associatedFileKind === 'learning' || associatedFileKind === 'chore')
+      ? { scope: target.scope, kind: associatedFileKind, filename: associatedFilename }
+      : null;
+
+  /** Type a command into this session, as if Ashish had typed it, then press Enter. */
+  const sendToAgent = useCallback((text: string) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== 1) return false;
+    ws.send(JSON.stringify({ t: 'i', d: text }));
+    // Enter separately: in one write the TUI can take the CR as part of a paste.
+    setTimeout(() => {
+      if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'i', d: '\r' }));
+    }, 120);
+    return true;
+  }, []);
+
+  // A row's Design button bumps the nonce: open the design window.
+  useEffect(() => {
+    if (target.designNonce) setDesignOpen(true);
+  }, [target.designNonce]);
 
   useEffect(() => {
     onProtectUnloadChange?.(status === 'connecting' || status === 'live');
@@ -349,7 +375,7 @@ export function TerminalOverlay({
   }, [writePtyOutput]);
 
   useEffect(() => {
-    if (minimized || viewMode !== 'terminal') return;
+    if (minimized || designOpen || viewMode !== 'terminal') return;
     const id = requestAnimationFrame(() => {
       try {
         fitRef.current?.fit();
@@ -364,7 +390,7 @@ export function TerminalOverlay({
       }
     });
     return () => cancelAnimationFrame(id);
-  }, [minimized, fullscreen, viewMode]);
+  }, [minimized, fullscreen, viewMode, designOpen]);
 
   useEffect(() => {
     if (viewMode === 'file') void loadAssociatedFile();
@@ -437,8 +463,8 @@ export function TerminalOverlay({
           )}
           <button
             className="btn sm ghost"
-            onClick={() => setViewMode((m) => (m === 'terminal' ? 'file' : 'terminal'))}
-            disabled={viewMode === 'terminal' && !associatedFilename}
+            onClick={() => setViewMode((m) => (m === 'file' ? 'terminal' : 'file'))}
+            disabled={viewMode !== 'file' && !associatedFilename}
             title={
               associatedFilename
                 ? viewMode === 'terminal'
@@ -447,7 +473,7 @@ export function TerminalOverlay({
                 : 'No file is attached to this session yet'
             }
           >
-            {viewMode === 'terminal' ? 'View file' : 'Terminal'}
+            {viewMode === 'file' ? 'Terminal' : 'View file'}
           </button>
           {viewMode === 'file' && associatedFilename && (
             <button className="btn sm ghost" onClick={() => void loadAssociatedFile()} disabled={fileLoading}>
@@ -478,6 +504,14 @@ export function TerminalOverlay({
             title={codontBinding ? `Code ontology\n${codontBinding.instruction}` : 'No code ontology — /codont creates one'}
           >
             {viewMode === 'codont' ? 'Terminal' : '🕸️ Ontology'}
+          </button>
+          <button
+            className="btn sm ghost"
+            onClick={() => designKey && setDesignOpen(true)}
+            disabled={!designKey}
+            title={designKey ? 'Design: your prose and the facts derived from it' : 'No learning/chore file attached to this session yet'}
+          >
+            ✎ Design
           </button>
           <button className="btn sm ghost" onClick={onToggleFullscreen}>
             {fullscreen ? 'Back' : 'Fullscreen'}
@@ -574,6 +608,41 @@ export function TerminalOverlay({
                 Got it
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {designOpen && designKey && (
+        <div className="overlay-backdrop design-backdrop">
+          {/* no backdrop-click close, same as the terminal: a stray click must not lose a thought */}
+          <div className="overlay design-overlay">
+            <header className="overlay-head">
+              <div className="titles">
+                <h2>✎ Design · {target.title}</h2>
+                <div className="path">
+                  {target.agent} · {sessionId || 'new session'} · commands go to this session's terminal
+                </div>
+              </div>
+              {status === 'live' && (
+                <span
+                  className={`agent-activity-dot ${target.agentState || 'idle'}`}
+                  title={target.agentState === 'busy' ? 'Agent is working' : 'Agent is idle'}
+                />
+              )}
+              <button className="btn sm ghost" onClick={() => setDesignOpen(false)} title="Back to the session terminal (the design stays as it is)">
+                ❯ Terminal
+              </button>
+              <button className="btn sm ghost" onClick={() => setDesignOpen(false)}>
+                Close ✕
+              </button>
+            </header>
+            <DesignView
+              dkey={designKey}
+              repo={target.directory}
+              agent={target.agent}
+              agentLive={status === 'live'}
+              sendToAgent={sendToAgent}
+            />
           </div>
         </div>
       )}

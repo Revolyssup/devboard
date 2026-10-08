@@ -225,7 +225,7 @@ async function contentLoader(binding, refResolved) {
  * off-by-a-few line numbers were the single largest source of red/dashed elements, and an
  * anchor the server located itself cannot drift.
  */
-function findSymbolLine(text, symbol) {
+export function findSymbolLine(text, symbol) {
   const esc = symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const patterns = [
     new RegExp(`^\\s*func\\s+(\\([^)]*\\)\\s*)?${esc}\\s*(\\[|\\()`),
