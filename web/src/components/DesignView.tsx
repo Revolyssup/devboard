@@ -197,6 +197,21 @@ export function DesignView({
 
   const derive = () => void command(`/design derive ${ref}`, { item: null, action: 'derive' });
 
+  /** Facts the code backs but nothing has run yet — the ones a bulk verify is for. */
+  const toVerify = items.filter((i) => i.kind === 'fact' && i.status === 'code' && !i.request);
+  const verifyAll = async () => {
+    if (!toVerify.length) return;
+    if (saveState !== 'saved') await flush();
+    const ids = toVerify.map((i) => i.id);
+    const prefix = agent === 'codex' ? 'run ' : '';
+    if (!sendToAgent(`${prefix}/design verify-all ${ref} ${ids.join(' ')}`)) {
+      toast('The session terminal is not connected', 'err');
+      return;
+    }
+    await Promise.all(ids.map((id) => designApi.request(dkey, id, 'verify').catch(() => {})));
+    void load();
+  };
+
   const groups = {
     flags: items.filter((i) => i.kind === 'flag' && !i.resolved),
     targets: items.filter((i) => i.kind === 'target'),
@@ -251,6 +266,18 @@ export function DesignView({
           >
             {deriving ? <span className="design-spin" /> : null}
             {deriving ? 'Deriving…' : 'Derive facts'}
+          </button>
+          <button
+            className="btn sm ghost"
+            onClick={() => void verifyAll()}
+            disabled={!agentLive || toVerify.length === 0}
+            title={
+              toVerify.length
+                ? `Verify every code-backed fact at runtime, one after another: ${toVerify.map((i) => i.id).join(', ')}`
+                : 'No code-backed facts waiting for a runtime check'
+            }
+          >
+            Verify all{toVerify.length ? ` (${toVerify.length})` : ''}
           </button>
           {deriving && (
             <button className="btn sm ghost" title="Clear the spinner" onClick={() => void designApi.request(dkey, null, null).then(load)}>

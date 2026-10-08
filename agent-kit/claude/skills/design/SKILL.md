@@ -1,6 +1,6 @@
 ---
 name: design
-description: Work a devboard Design — the user's prose document plus the facts, flags and targets derived from it. Use when the terminal receives `/design derive|verify|rederive|prototype ... <ref>` (typed by devboard's Design buttons), or when the user challenges / gives advice about a fact, flag or target (F-7, X-2, T-3) in the terminal.
+description: Work a devboard Design — the user's prose document plus the facts, flags and targets derived from it. Use when the terminal receives `/design derive|verify|verify-all|rederive|prototype ... <ref>` (typed by devboard's Design buttons), or when the user challenges / gives advice about a fact, flag or target (F-7, X-2, T-3) in the terminal.
 ---
 
 # /design — facts, flags and targets from the user's prose
@@ -12,6 +12,7 @@ Commands arrive typed into this terminal by devboard's buttons:
 ```
 /design derive <ref>
 /design verify <F-n|X-n> <ref>
+/design verify-all <ref> <F-n> <F-n> ...
 /design rederive <F-n|X-n|T-n> <ref>
 /design prototype <T-n> branch=<name> <ref>
 ```
@@ -74,6 +75,23 @@ JSON
    response; fix any `ok:false` with `item/update` before finishing.
 5. Clear the derive spinner. In the terminal, list what you created (id + one line) and **what you
    skipped and why**, in a few lines.
+
+## verify-all (several facts)
+
+`/design verify-all <ref> F-1 F-4 F-7` — the user's bulk button, for code-backed facts with no
+runtime check yet. It is the **verify** procedure below, once per item, **one item at a time** in
+the order given:
+
+- Before starting, look for setup the items share (same cluster, same base config) and put it in
+  `<design dir>/fixtures/` once, rather than copying it into every item.
+- Never run two items' `verify.sh` at the same time: they share the environment and would
+  contaminate each other.
+- Finish each item fully (normal + control run, spinner cleared with `"request": null`) before
+  starting the next, so the sidebar fills in as you go.
+- If an item hits `cannot-run` (exit 2) because the environment itself is missing or broken, stop
+  there and report: every item after it would fail the same way. Clear the spinners of the items
+  you didn't get to.
+- End with one line per item: id, result, sha that ran.
 
 ## verify (fact or flag)
 

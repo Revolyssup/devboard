@@ -82,6 +82,11 @@ item. So nothing changes kind or disappears unless the user asked for it.
    `./verify.sh --control` (expect FAIL: same assertion, inputs changed so the claim should not hold).
 3. Record both runs under `runs/`. The item turns green only when both behave as expected.
 
+**Verify all** (sidebar header) sends every code-backed fact that has no runtime check yet as one
+`/design verify-all` command. The agent verifies them one at a time, never in parallel because they
+share the environment, and stops at the first "cannot run here" result, since the ones after it
+would fail the same way.
+
 ## Prototype (Targets)
 
 Prototype takes an explicit branch name. If the branch exists it is reused, otherwise it is created
