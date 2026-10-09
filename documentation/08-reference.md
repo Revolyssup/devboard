@@ -196,7 +196,7 @@ wrote. Paths below are defaults; see [Configuration](#configuration) to move the
 | `~/.agents/data/chores/{work,personal}/*.md` | read, edit, delete, create drafts | Chore files with *What is done* / *What is happening* / *What is pending*. See [Chores](03-chores.md). |
 | `~/.agents/data/chores/{work,personal}/index.txt` | read, append, remove rows | `Chore \| Filename \| Session ID \| Directory \| Started`. |
 | `~/.agents/data/sessions/index.jsonl` | append | One JSON line per draft learning or chore created for a new browser session. |
-| `~/.agents/environments/meta/<id>/recipe.yaml` | read | Environment recipes (`layer.yaml` also accepted; `meta/lib/` is shared helpers, skipped). Not shipped with devboard. See [Environments](05-environments.md). |
+| `~/.agents/environments/meta/<id>/recipe.yaml` | read | Environment recipes (`layer.yaml` also accepted; `meta/lib/` is shared helpers, skipped). `install.sh` seeds an example catalog if none exists. See [Environments](05-environments.md). |
 | `~/.agents/environments/instances/<id>.json` | read, write | What exists on this machine, with leases. |
 | `~/.agents/environments/sessions/<session>.json` | read, write | A session's environment binding (target, params, via, agent, directory). |
 | `~/.agents/environments/runs/<id>/run.json` | write | Record of each plan or teardown run. |
@@ -249,6 +249,10 @@ which first backs it up as `*.bak.<timestamp>`. `--no-npm` skips `npm run instal
 | `agents/specs/start-chore.md`, `end-chore.md` | `~/.agents/specs/` | Chore file and index format, create and close. |
 | `agents/specs/design-facts.md` | `~/.agents/specs/` | Design window contract. |
 | `agents/specs/design-agent.md` | `~/.agents/specs/` | The procedure any agent follows for `/design` and `/verify-fact`. |
+| `agents/specs/environments.md`, `env-agent.md` | `~/.agents/specs/` | Environments contract, and the procedure any agent follows for `/start-env` and `/end-env`. |
+| `agents/specs/codont.md`, `codont-agent.md` | `~/.agents/specs/` | Code Ontology contract, and the procedure any agent follows for `/codont`. |
+| `agents/codont/meta/go.md` | `~/.agents/codont/meta/` | What boxes, badges and edges mean for Go. |
+| `agents/environments/meta/` | `~/.agents/environments/meta/` | Example recipe catalog. Copied **only** if that directory doesn't exist yet, never overwritten. |
 | `claude/skills/start-chore`, `end-chore` | `~/.claude/skills/` | Work chores. |
 | `claude/skills/start-personal-chore`, `end-personal-chore` | `~/.claude/skills/` | Personal chores. |
 | `claude/skills/resume-chore` | `~/.claude/skills/` | Continue an existing chore file without creating a duplicate. |
@@ -257,21 +261,11 @@ which first backs it up as `*.bak.<timestamp>`. `--no-npm` skips `npm run instal
 | `claude/skills/design`, `verify-fact` | `~/.claude/skills/` | Thin pointers to `design-agent.md`; typed by the Design window's buttons. |
 | `codex/skills/agent-memory` | `~/.codex/skills/` | Handoff and chore workflows for Codex. |
 | `codex/skills/design`, `verify-fact` | `~/.codex/skills/` | Same Design pointers for Codex. |
+| `claude/skills/start-env`, `end-env`, `codont` and the same in `codex/skills/` | `~/.claude/skills/`, `~/.codex/skills/` | Thin pointers to `env-agent.md` and `codont-agent.md`. |
 
 Codex skills are installed only if `codex` is on `PATH` or `~/.codex` exists. `install.sh` also
 creates the data directories, symlinks each canonical / legacy pair, creates
 `~/.agents/data/sessions`, and seeds empty `index.txt` files with their headers.
-
-### Used by devboard but not shipped
-
-These skills appear in devboard's UI and messages but are not in `agent-kit/`. The features that
-depend on them stay empty until you provide your own.
-
-| Skill | Used for | Also missing |
-| --- | --- | --- |
-| `start-env` | Building or reusing a session's environment and binding it (`POST /api/env/bind`, `/api/env/run`). | The recipe catalog in `~/.agents/environments/meta/` and the spec `~/.agents/specs/environments.md`. |
-| `end-env` | Ending a session's environment (`POST /api/env/end`). | — |
-| `codont` | Building a Code Ontology (`POST /api/codont/start`, `/update`). | The spec `~/.agents/specs/codont.md`. |
 
 The progress report also expects files from a personal practice framework (`/progress-in-learning-shit`)
 that is not part of the kit.

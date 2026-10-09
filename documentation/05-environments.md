@@ -6,19 +6,19 @@ composes it from reusable pieces, checks what already exists on your machine, an
 parts that are missing. Use it when standing up an environment by hand would cost more time than
 the investigation itself, or when you can't remember what was left running from last time.
 
-> **Requirements.** The dashboard side (the Env button, the Environment overlay, the API and the
-> `npm run env` CLI) ships in this repo and works as-is. The `/start-env` and `/end-env` skills that
-> drive it from an agent session do **not**: they are not in `agent-kit/`, and
-> `scripts/install.sh` does not install them. Neither are the recipe catalog under
-> `~/.agents/environments/meta/` and the design spec (`~/.agents/specs/environments.md`). You
-> need to install the skills and write or obtain recipes separately. Without a recipe catalog,
-> every environment endpoint fails with `recipe catalog not found at …`.
+> **Requirements.** Everything ships with devboard. `scripts/install.sh` installs the `/start-env`
+> and `/end-env` skills for Claude and Codex, the procedure every agent follows
+> (`~/.agents/specs/env-agent.md`) and the contract (`~/.agents/specs/environments.md`). If you have
+> no recipe catalog yet, it also seeds an **example catalog** in `~/.agents/environments/meta/`:
+> Docker → a local registry → kind clusters → an echo workload. It's a starting point. Edit or
+> replace it to describe your own environments; the installer never touches an existing catalog.
+> Its source is [`agent-kit/agents/environments/meta/`](../agent-kit/agents/environments/meta/).
 
 ## The model
 
 | Term | Meaning |
 | --- | --- |
-| **Recipe** (layer) | A definition of one kind of sub-environment, e.g. "kind clusters" or "XCP stack". It lives in its own directory with a `recipe.yaml` and shell scripts: `probe.sh` (required), `setup.sh`, `teardown.sh`, and optionally `resources.sh`. |
+| **Recipe** (layer) | A definition of one kind of sub-environment, e.g. "kind clusters" or "local registry". It lives in its own directory with a `recipe.yaml` and shell scripts: `probe.sh` (required), `setup.sh`, `teardown.sh`, and optionally `resources.sh`. |
 | **Layer graph** | Recipes form a DAG. `parent` is containment: if the parent is rebuilt, the child dies with it. `requires` is a dependency that must exist before setup, but rebuilding it does not destroy the dependant. A recipe can list several alternative parents. |
 | **Instance** | A recipe that has been materialised on this machine, recorded as a JSON file with what was asked for (declared params), what was found (observed), and who is using it (leases). |
 | **Probe** | `probe.sh` is read-only and prints one JSON object: `present`, `healthy`, `identity`, `details`, `errors`. |
@@ -58,9 +58,10 @@ plan. It also handles:
 
 ### From an agent session: `/start-env`
 
-1. In a Claude session (started from the dashboard or a terminal), run
-   `/start-env <what you want>`, e.g. `/start-env xcp multicluster with 2 clusters to test failover`.
-   The skill also accepts a Jira ticket URL.
+1. In an agent session (started from the dashboard or a terminal), run
+   `/start-env <what you want>` (in Codex: `run /start-env …`), e.g. with the example catalog
+   `/start-env an echo server in namespace demo on one cluster`. If you pass an issue or ticket URL,
+   the agent reads it if it has a tool for that, and otherwise asks you to paste the relevant part.
 2. The agent lists the recipes, picks the shallowest target that answers your instruction, and
    states the target and params it chose in one line.
 3. It runs a dry-run plan and shows it to you: what is reused, created, rebuilt or torn down, and

@@ -90,6 +90,21 @@ place() { # $1 = source file in the kit, $2 = destination
 step "Shared agent contract (~/.agents)"
 place "$KIT/agents/AGENTS.md" "$HOME/.agents/AGENTS.md"
 for f in "$KIT"/agents/specs/*.md; do place "$f" "$HOME/.agents/specs/$(basename "$f")"; done
+# Code Ontology language contracts (what boxes/badges/edges mean per language).
+for f in "$KIT"/agents/codont/meta/*.md; do place "$f" "$HOME/.agents/codont/meta/$(basename "$f")"; done
+
+# Environment recipes are yours: the kit only seeds an example catalog on a machine that has none,
+# and never touches an existing one (not even with --force).
+step "Environment recipe catalog (~/.agents/environments/meta)"
+ENV_META="$HOME/.agents/environments/meta"
+if [ -d "$ENV_META" ]; then
+  ok "${ENV_META/#$HOME/~} exists — kept as is (example catalog: agent-kit/agents/environments/meta)"
+elif [ -d "$KIT/agents/environments/meta" ]; then
+  mkdir -p "$(dirname "$ENV_META")"
+  if [ "$MODE" = link ]; then ln -s "$KIT/agents/environments/meta" "$ENV_META"; else cp -R "$KIT/agents/environments/meta" "$ENV_META"; fi
+  find "$ENV_META/" -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
+  ok "seeded ${ENV_META/#$HOME/~} with the example catalog (edit it to describe your own environments)"
+fi
 
 step "Claude Code skills (~/.claude/skills)"
 for d in "$KIT"/claude/skills/*/; do

@@ -68,7 +68,8 @@ agent-kit/
   agents/AGENTS.md                 shared data contract every skill reads first
   agents/specs/                    handoff.md, start-chore.md, end-chore.md (file + index formats),
                                    design-facts.md (the Design window's contract),
-                                   design-agent.md (the agent-neutral procedure every agent follows)
+                                   design-agent.md (the agent-neutral procedure every agent follows),
+                                   environments.md + env-agent.md, codont.md + codont-agent.md
   claude/skills/
     start-chore, end-chore                    Work → Active chores
     start-personal-chore, end-personal-chore  Personal → Active chores
@@ -76,8 +77,12 @@ agent-kit/
     handoff                        writes work learnings (+ index row) → Work learnings table
     learn-from-past                reads the learnings index back into a session
     design, verify-fact            pointers to design-agent.md (the ✎ Design window's commands)
+    start-env, end-env             pointers to env-agent.md (environments)
+    codont                         pointer to codont-agent.md (Code Ontology)
   codex/skills/agent-memory/       the same workflows for Codex (`run /start-chore …`, `resume chore …`)
-  codex/skills/design, verify-fact the same Design pointers for Codex (`run /design …`)
+  codex/skills/design, verify-fact, start-env, end-env, codont   the same pointers for Codex (`run /…`)
+  agents/codont/meta/go.md         Code Ontology rules for Go → ~/.agents/codont/meta/
+  agents/environments/meta/        example environment recipe catalog (seeded only if you have none)
 ```
 
 ### Optional pieces
@@ -88,9 +93,9 @@ agent-kit/
   newest HTML in `~/dev/learning-shit/reports` (`DEVBOARD_REPORTS_DIR` to change it). Those are
   produced by a personal practice framework that is not part of this kit — without it the table
   and button simply show their empty state. Personal *chores* work fully.
-- **Code Ontology (`/codont`) and environments (`/start-env`)** are on `master`, but the skills
-  they need are not shipped in this kit; see [documentation/05-environments.md](documentation/05-environments.md)
-  and [documentation/06-code-ontology.md](documentation/06-code-ontology.md).
+- **Environments (`/start-env`).** `install.sh` seeds an *example* recipe catalog (Docker → local
+  registry → kind → echo workload) only if `~/.agents/environments/meta` doesn't exist. Describe
+  your own environments there; see [documentation/05-environments.md](documentation/05-environments.md).
 
 ### Troubleshooting
 

@@ -1,0 +1,38 @@
+# EXAMPLE RECIPE. The root of every environment in this catalog: a responding Docker daemon with
+# enough CPU and memory. Nothing below it survives the daemon going away.
+id: host-docker
+title: Docker host
+icon: "🐳"          # shown on the dashboard row of any environment rooted here
+kind: host
+parent: null        # root
+requires: []
+
+params:
+  minCpu:
+    type: int
+    default: 2
+    match: gte      # a host with more CPUs than asked for satisfies the request
+  minMemGi:
+    type: int
+    default: 4
+    match: gte
+
+# Every layer shares the daemon; nothing claims it exclusively.
+claims:
+  exclusive: []
+  shared: ["host:docker"]
+  writes: []
+
+# Starting, stopping or resizing Docker is the user's call, never the engine's. `manual` means:
+# a plan that would need to create/rebuild this becomes a MANUAL step showing setup.manualHint,
+# and a teardown plan shows it as MANUAL instead of running anything. (No teardown.sh, by design.)
+teardown: manual
+repair: false
+
+setup:
+  manualHint: >-
+    start the Docker daemon (Docker Desktop, colima, or `sudo systemctl start docker`) and give it
+    at least the CPU/memory this recipe declares, then plan again
+
+probeTimeoutSec: 20
+estimateSec: 0

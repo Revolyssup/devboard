@@ -1,0 +1,32 @@
+# EXAMPLE RECIPE. A plain registry:2 container on 127.0.0.1:<registryPort>, attached to the `kind`
+# docker network so kind nodes can pull from it by container name. Long-lived and cheap to keep.
+id: registry-local
+title: Local image registry
+icon: "📦"
+kind: host
+parent: host-docker       # containment: if Docker goes, this goes
+requires: []
+
+params:
+  registryName:
+    type: string
+    default: kind-registry
+    match: exact
+  registryPort:
+    type: int
+    default: 5000
+    match: exact
+
+# Conflict is derived from claims, never listed pairwise. Anything else that wants host port 5000
+# (or a container with this name) collides here automatically.
+claims:
+  exclusive: ["host:port:${registryPort}", "host:container:${registryName}"]
+  shared: ["host:docker", "host:network:kind"]
+  writes: []
+
+teardown: allowed
+repair: true              # a stopped container is restarted by re-running setup.sh
+
+probeTimeoutSec: 20
+setupTimeoutSec: 300
+estimateSec: 20

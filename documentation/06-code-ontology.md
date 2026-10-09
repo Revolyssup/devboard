@@ -6,12 +6,10 @@ changes it as you talk, and devboard checks every box and arrow against the real
 drawing it solid. Use it when a bug or feature cuts across many packages and you want the call
 chain written down somewhere other than your head. It currently supports **Go only**.
 
-> **Requirements.** The dashboard side (the 🕸️ button, the Ontology view, the API that verifies
-> and stores the diagram) ships in this repo and works as-is. The `/codont` skill that starts a
-> diagram and teaches the agent how to write it is **not** shipped: it is not in `agent-kit/`, and
-> `scripts/install.sh` does not install it. Neither are the design spec
-> (`~/.agents/specs/codont.md`) or the Go language contract (`~/.agents/codont/meta/go.md`). You
-> need to install those separately.
+> **Requirements.** Everything ships with devboard. `scripts/install.sh` installs the `/codont`
+> skill for Claude and Codex, the procedure every agent follows (`~/.agents/specs/codont-agent.md`),
+> the contract (`~/.agents/specs/codont.md`) and the Go language rules
+> (`~/.agents/codont/meta/go.md`). In Codex, type `run /codont <instruction>`.
 
 ## How it works
 

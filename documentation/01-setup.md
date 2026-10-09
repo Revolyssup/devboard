@@ -24,14 +24,15 @@ cd ~/dev/devboard
 ./scripts/install.sh
 ```
 
-`install.sh` is idempotent, so re-run it after every `git pull`. It does five things:
+`install.sh` is idempotent, so re-run it after every `git pull`. It does six things:
 
 | Step | Result |
 | --- | --- |
 | Prerequisites | Checks `node`/`npm`; warns (doesn't fail) if `claude`, `codex`, `lsof` or `ps` is missing. |
 | Data directories | Creates `~/.agents/data/{learnings,chores}/{work,personal}` and `~/.agents/data/sessions`. Each one is paired with its legacy `~/.claude/...` path by a symlink, so skills that write either path land in the same place. Seeds empty `index.txt` files. Never moves or deletes existing data. |
 | Shared contract | `agent-kit/agents/AGENTS.md` → `~/.agents/AGENTS.md`, and `agent-kit/agents/specs/*.md` → `~/.agents/specs/`. |
-| Skills | `agent-kit/claude/skills/*` → `~/.claude/skills/`; `agent-kit/codex/skills/*` → `~/.codex/skills/` (skipped if Codex isn't installed). |
+| Skills | `agent-kit/claude/skills/*` → `~/.claude/skills/`; `agent-kit/codex/skills/*` → `~/.codex/skills/` (skipped if Codex isn't installed). The Code Ontology Go rules → `~/.agents/codont/meta/`. |
+| Example environments | If `~/.agents/environments/meta/` doesn't exist, copies the example recipe catalog there. An existing catalog is never touched, not even with `--force`. |
 | App | `npm run install:all && npm run build`. |
 
 Flags:
@@ -121,21 +122,20 @@ Everything in the table below works after `install.sh`:
 | Work / Personal learnings tables, search, read/edit/delete | [02-learnings.md](02-learnings.md) |
 | Active chores | [03-chores.md](03-chores.md) |
 | Agent sessions in the browser | [04-agent-sessions.md](04-agent-sessions.md) |
+| Environments (`/start-env`, `/end-env`), with an example recipe catalog to start from | [05-environments.md](05-environments.md) |
+| Code Ontology (`/codont`, Go) | [06-code-ontology.md](06-code-ontology.md) |
 | ✎ Design: prose → facts, flags, targets, verified at runtime | [07-design.md](07-design.md) |
 
-Two features need skills that are **not** shipped in `agent-kit/`. The dashboard side is there, but
-you have to install those skills separately:
+Every agent-side piece works with Claude Code and Codex (in Codex, prefix commands with `run`, e.g.
+`run /start-env …`).
 
-| Feature | Needs | Doc |
-| --- | --- | --- |
-| Environments | `/start-env`, `/end-env`, and a recipe catalog under `~/.agents/environments/meta/` | [05-environments.md](05-environments.md) |
-| Code Ontology | `/codont` | [06-code-ontology.md](06-code-ontology.md) |
+Not included:
 
-The **busy / idle dot** on a session terminal is driven by notifier hooks (`~/.claude/hooks/claude-notifier-on-*.js`,
-writing `~/.claude/hooks/claude-signal`) that aren't shipped either. Without them every terminal
+- The **busy / idle dot** on a session terminal is driven by notifier hooks (`~/.claude/hooks/claude-notifier-on-*.js`,
+writing `~/.claude/hooks/claude-signal`) that aren't shipped. Without them every terminal
 shows idle; everything else works. See [04-agent-sessions.md](04-agent-sessions.md).
 
-The **Learning Progress Report** button and the richer columns of the Personal learnings table read
+- The **Learning Progress Report** button and the richer columns of the Personal learnings table read
 files from a separate personal-practice workflow that isn't part of this kit. Without it they show
 their empty state; Personal *chores* work fully. See [02-learnings.md](02-learnings.md).
 

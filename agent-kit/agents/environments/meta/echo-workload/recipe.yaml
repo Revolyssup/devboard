@@ -1,0 +1,37 @@
+# EXAMPLE RECIPE (a leaf). A public echo server (hashicorp/http-echo) as Deployment + Service
+# `echo` in <namespace> on cluster 0 (kind cluster devboard-0). Useful as "something to send
+# traffic to" when reproducing networking behaviour.
+id: echo-workload
+title: Echo workload
+icon: "📣"
+kind: workload
+parent: kind-clusters
+requires: []
+
+params:
+  namespace:
+    type: string
+    default: echo
+    match: exact
+  image:
+    type: string
+    default: hashicorp/http-echo:1.0
+    match: exact
+  text:
+    type: string
+    default: hello from devboard
+    match: exact
+
+# Two sessions can each run their own echo in different namespaces: the exclusive claims are
+# disjoint, so parallel use is derived, not asserted. The same namespace twice collides.
+claims:
+  exclusive: ["cluster:devboard-0/ns:${namespace}"]
+  shared: ["cluster:devboard-0"]
+  writes: []
+
+teardown: allowed
+repair: true              # setup.sh re-applies the manifests, which fixes a degraded deployment
+
+probeTimeoutSec: 30
+setupTimeoutSec: 300
+estimateSec: 30

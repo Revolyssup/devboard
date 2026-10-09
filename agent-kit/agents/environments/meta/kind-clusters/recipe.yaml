@@ -1,0 +1,43 @@
+# EXAMPLE RECIPE. N kind clusters named devboard-0..N-1 (kind's default kindest/node image unless a
+# k8sVersion is asked for), each with its own kubeconfig at ~/.kube/devboard-N, wired to pull from
+# the local registry as localhost:<registryPort>.
+id: kind-clusters
+title: Kind clusters
+icon: "☸️"
+kind: runtime
+parent: registry-local    # containment: rebuilding the registry/docker host takes these with it
+requires: []              # non-containment dependencies would go here (e.g. a built image set)
+
+params:
+  clusters:
+    type: int
+    default: 2
+    match: gte            # 3 live clusters satisfy a request for 2; never shrink reusable capacity
+    material: true        # if the user did not say how many, /start-env asks
+  k8sVersion:
+    type: string
+    default: null         # null = "whatever exists": never forces a rebuild on its own
+    match: semverGte
+  # Passthrough params (match: any never causes a rebuild). Same names as registry-local's, so a
+  # spec param such as registryPort=5001 reaches both recipes: the planner spreads every spec
+  # param to every recipe in the chain that declares it.
+  registryName:
+    type: string
+    default: kind-registry
+    match: any
+  registryPort:
+    type: int
+    default: 5000
+    match: any
+
+claims:
+  exclusive: ["host:kind:devboard-*"]
+  shared: ["host:docker", "host:network:kind", "host:container:${registryName}"]
+  writes: []
+
+teardown: allowed
+repair: false             # a half-created kind cluster is not worth repairing: setup recreates it
+
+probeTimeoutSec: 60
+setupTimeoutSec: 1200
+estimateSec: 150          # realistic wall-clock, NOT the timeout
