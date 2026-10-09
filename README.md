@@ -6,6 +6,8 @@ A browser dashboard over the shared agent learnings libraries and chore tracker 
 `~/.agents/data`. The old `~/.claude` data paths remain compatibility links during migration.
 Backend and frontend both live in this repo.
 
+**Documentation:** [`documentation/`](documentation/README.md) — setup, then one page per feature.
+
 ```
 ┌──────────┬──────────────────────────────────────────────────────────┐
 │ Personal │  Learnings table  (Active · Timestamp · Filename · Name) │
@@ -86,8 +88,9 @@ agent-kit/
   newest HTML in `~/dev/learning-shit/reports` (`DEVBOARD_REPORTS_DIR` to change it). Those are
   produced by a personal practice framework that is not part of this kit — without it the table
   and button simply show their empty state. Personal *chores* work fully.
-- **Code Ontology (`/codont`) and environments (`/start-env`)** live on the unmerged
-  `codont-main-agent-writes` branch and are not part of `master` or this kit.
+- **Code Ontology (`/codont`) and environments (`/start-env`)** are on `master`, but the skills
+  they need are not shipped in this kit; see [documentation/05-environments.md](documentation/05-environments.md)
+  and [documentation/06-code-ontology.md](documentation/06-code-ontology.md).
 
 ### Troubleshooting
 
