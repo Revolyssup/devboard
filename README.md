@@ -51,7 +51,7 @@ What `install.sh` does (it is idempotent — re-run it after every `git pull`):
 | Data dirs | Creates `~/.agents/data/{learnings,chores}/{work,personal}` and `~/.agents/data/sessions`, each paired with its legacy `~/.claude/...` path by a symlink (skills write through either path; both must be the same dir). Seeds empty `index.txt` files with the right headers. Never moves or deletes existing data. |
 | Shared contract | `agent-kit/agents/` → `~/.agents/AGENTS.md` + `~/.agents/specs/*.md` |
 | Claude skills | `agent-kit/claude/skills/*` → `~/.claude/skills/` |
-| Codex skill | `agent-kit/codex/skills/agent-memory` → `~/.codex/skills/` (skipped if Codex isn't installed) |
+| Codex skills | `agent-kit/codex/skills/*` → `~/.codex/skills/` (skipped if Codex isn't installed) |
 | App | `npm run install:all && npm run build` |
 
 Flags: `--link` symlinks skills/specs into this checkout instead of copying (so `git pull` alone
@@ -65,15 +65,17 @@ warning); `--no-npm` does only the agent-side setup.
 agent-kit/
   agents/AGENTS.md                 shared data contract every skill reads first
   agents/specs/                    handoff.md, start-chore.md, end-chore.md (file + index formats),
-                                   design-facts.md (the Design window's contract)
+                                   design-facts.md (the Design window's contract),
+                                   design-agent.md (the agent-neutral procedure every agent follows)
   claude/skills/
     start-chore, end-chore                    Work → Active chores
     start-personal-chore, end-personal-chore  Personal → Active chores
     resume-chore                   used by the dashboard's ❯ Run button on a chore row
     handoff                        writes work learnings (+ index row) → Work learnings table
     learn-from-past                reads the learnings index back into a session
-    design, verify-fact            drive the ✎ Design window (derive / verify / re-derive / prototype)
+    design, verify-fact            pointers to design-agent.md (the ✎ Design window's commands)
   codex/skills/agent-memory/       the same workflows for Codex (`run /start-chore …`, `resume chore …`)
+  codex/skills/design, verify-fact the same Design pointers for Codex (`run /design …`)
 ```
 
 ### Optional pieces
@@ -228,8 +230,10 @@ fullscreen window on top of that row's agent session:
 - The server, not the agent, runs `verify.sh`; its exit code (0 pass / 1 fail / 2 couldn't run) is
   the result. Each item's folder is self-contained: copy it anywhere and run `./verify.sh`.
 
-Contract: `agent-kit/agents/specs/design-facts.md`. Needs the `design` and `verify-fact` skills
-(installed by `scripts/install.sh`).
+Works with whichever agent the row's session uses (Claude or Codex). Contract:
+`agent-kit/agents/specs/design-facts.md`; the procedure every agent follows:
+`agent-kit/agents/specs/design-agent.md`. The `design` / `verify-fact` skills for Claude and Codex
+are thin pointers to it (installed by `scripts/install.sh`).
 
 ## API
 

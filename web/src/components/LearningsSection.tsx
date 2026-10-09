@@ -160,6 +160,11 @@ export function LearningsSection({
   }, [hasUnloadProtectedTerminal]);
 
   const openTerminal = (target: TerminalTarget) => {
+    try {
+      localStorage.setItem('devboard.lastAgent', target.agent);
+    } catch {
+      /* per-viewer convenience only */
+    }
     const key = terminalKey(target);
     const existing = terminals.find((o) => terminalKey(o.target) === key);
     if (existing) {

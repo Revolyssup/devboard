@@ -43,6 +43,14 @@ function useDesignRefs() {
   return refs;
 }
 
+function lastAgent(): 'claude' | 'codex' {
+  try {
+    return localStorage.getItem('devboard.lastAgent') === 'codex' ? 'codex' : 'claude';
+  } catch {
+    return 'claude';
+  }
+}
+
 export function DesignButton({
   scope,
   kind,
@@ -70,8 +78,9 @@ export function DesignButton({
       (t.filename === filename && (t.kind === kind || (t.kind === 'new' && t.newKind === kind))) ||
       usable.some((c) => c.agent === t.agent && c.id === t.sessionId)
   );
-  const newest = usable
-    .filter((c) => c.agent === 'claude')
+  // Whichever agent the row is actually being worked with: the open terminal if there is one,
+  // else the most recently active session of ANY agent (Claude or Codex).
+  const newest = [...usable]
     .sort((a, b) => {
       if (a.active !== b.active) return a.active ? -1 : 1;
       return new Date(b.lastSeen || 0).getTime() - new Date(a.lastSeen || 0).getTime();
@@ -85,7 +94,7 @@ export function DesignButton({
       return onOpenDesign({
         scope,
         kind,
-        agent: 'claude',
+        agent: newest.agent,
         filename,
         title,
         sessionId: newest.id,
@@ -94,11 +103,12 @@ export function DesignButton({
       });
     }
     if (!launchDir) return;
+    // No session on this row yet: start one with the agent last used in devboard.
     onOpenDesign({
       scope,
       kind: 'new',
       newKind: kind,
-      agent: 'claude',
+      agent: lastAgent(),
       filename,
       title,
       sessionId: '',

@@ -28,8 +28,5 @@ headings and frontmatter that must stay synchronized.
 
 ## devboard Design
 
-devboard's Design window types commands into this session as `run /design derive|verify|verify-all|rederive|prototype ... <ref>`;
-the user may also type `run /verify-fact <which part of the prose>`. Follow
-`~/.claude/skills/design/SKILL.md` (and `~/.claude/skills/verify-fact/SKILL.md`) exactly; the contract is
-`~/.agents/specs/design-facts.md`. Never write the design's `design.md`, and never report a verify result
-yourself — the devboard server runs `verify.sh` and its exit code is the result.
+For `run /design …` and `run /verify-fact …`, follow `~/.agents/specs/design-agent.md` (the `design`
+and `verify-fact` Codex skills point there too).

@@ -185,6 +185,10 @@ whose fragments are all gone is resolved; that is the only way a Flag goes away.
 
 ## For agents
 
+The step-by-step procedure for every command is `~/.agents/specs/design-agent.md` (agent-neutral;
+Claude and Codex skills only point to it). The rules below are its non-negotiable core.
+
+
 - Never write `design.md`. Never write item files directly; use `POST /api/design/update`.
 - Read code at the item's sha with `git show <sha>:<path>`, not the working tree.
 - A Target's script and inputs are frozen once they have failed on base. Change them only when
