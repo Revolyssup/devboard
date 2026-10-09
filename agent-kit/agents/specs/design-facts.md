@@ -64,6 +64,11 @@ Visual states (the only ones):
    "the part where I say anonymous requests are rejected". The agent finds those fragments in
    the prose and creates one item (fact, flag or target), the same way Derive would.
 
+**Derive from selection:** select lines, and the button becomes *Derive from selection*. The
+agent still reads the whole document, but only creates items for claims in the selection. The
+server enforces it: while that request is open, every new item must quote at least one fragment from
+inside the selection.
+
 Neither path runs anything. Verify and Prototype are always per item, on the user's click.
 
 **Re-derive** (per item, any kind) asks the agent to re-read the current prose and the code for that

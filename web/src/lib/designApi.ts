@@ -73,7 +73,7 @@ export interface DesignItem {
 }
 
 export interface DesignState {
-  binding: DesignKey & { repo: string | null; request: { action: string; at: string } | null };
+  binding: DesignKey & { repo: string | null; request: { action: string; at: string; scope?: string } | null };
   ref: string;
   dir: string;
   doc: string;
@@ -105,8 +105,8 @@ export const designApi = {
   saveDoc: (k: DesignKey, content: string) =>
     req<{ ok: true }>('/api/design/doc', { method: 'PUT', body: JSON.stringify({ ref: designRef(k), content }) }),
   remove: (k: DesignKey, item: string) => post('item/remove', k, { item }),
-  request: (k: DesignKey, item: string | null, action: string | null) =>
-    post('request', k, item ? { item, action } : { action }),
+  request: (k: DesignKey, item: string | null, action: string | null, scope?: string) =>
+    post('request', k, item ? { item, action } : { action, scope }),
   run: (k: DesignKey, item: string, mode: 'normal' | 'control') => post<{ runId: string }>('run', k, { item, mode }),
   file: (k: DesignKey, item: string, path: string) =>
     req<{ path: string; content: string; truncated: boolean; size: number }>(`/api/design/file?${q(k, { item, path })}`),

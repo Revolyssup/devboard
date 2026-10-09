@@ -116,12 +116,15 @@ export function DesignEditor({
   selected,
   onChange,
   onPickMark,
+  onSelection,
 }: {
   initial: string;
   marks: EditorMark[];
   selected: string | null;
   onChange: (doc: string) => void;
   onPickMark: (id: string) => void;
+  /** The selected prose (expanded to whole lines), or null when nothing is selected. */
+  onSelection?: (text: string | null) => void;
 }) {
   const host = useRef<HTMLDivElement | null>(null);
   const view = useRef<EditorView | null>(null);
@@ -129,6 +132,8 @@ export function DesignEditor({
   onChangeRef.current = onChange;
   const onPickRef = useRef(onPickMark);
   onPickRef.current = onPickMark;
+  const onSelRef = useRef(onSelection);
+  onSelRef.current = onSelection;
 
   useEffect(() => {
     if (!host.current) return;
@@ -159,6 +164,17 @@ export function DesignEditor({
           theme,
           EditorView.updateListener.of((u) => {
             if (u.docChanged) onChangeRef.current(u.state.doc.toString());
+            if (u.selectionSet || u.docChanged) {
+              const r = u.state.selection.main;
+              if (r.empty) onSelRef.current?.(null);
+              else {
+                // Whole lines: a claim rarely starts exactly where the mouse did.
+                const from = u.state.doc.lineAt(r.from).from;
+                const to = u.state.doc.lineAt(r.to).to;
+                const text = u.state.sliceDoc(from, to);
+                onSelRef.current?.(text.trim() ? text : null);
+              }
+            }
           }),
         ],
       }),

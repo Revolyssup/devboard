@@ -12,6 +12,7 @@ are the same for every agent; only the prefix differs (Claude: `/design …`; Co
 
 ```
 /design derive <ref>
+/design derive <ref> selection
 /design verify <F-n|X-n> <ref>
 /design verify-all <ref> <F-n> <F-n> ...
 /design rederive <F-n|X-n|T-n> <ref>
@@ -44,6 +45,13 @@ curl -s "$B/state?ref=$REF"            # prose (doc), items with status, runs, f
   `POST $B/request {"ref":..,"action":null}` (no item).
 
 ## derive
+
+**`derive <ref> selection`** — the user selected some lines and clicked *Derive from selection*.
+The selected text is in `/state` → `binding.request.scope`. Same procedure as below, except: read
+the whole doc for context and to avoid duplicates, but only create items for claims *in the
+selection*. Every new item must quote at least one fragment from inside `scope`; the server refuses
+the rest while this request is open. A claim that starts in the selection may also quote lines
+outside it.
 
 1. `GET /state`. Read `doc` in full, and the existing `items` (don't duplicate a claim an item already
    covers, even if worded differently; don't rewrite existing items).

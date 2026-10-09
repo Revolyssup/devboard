@@ -195,7 +195,25 @@ export function DesignView({
     void load();
   };
 
-  const derive = () => void command(`/design derive ${ref}`, { item: null, action: 'derive' });
+  const [selection, setSelection] = useState<string | null>(null);
+  const derive = async () => {
+    if (!selection) return void command(`/design derive ${ref}`, { item: null, action: 'derive' });
+    // Scoped derive: the selected prose is stored with the request (not typed into the terminal),
+    // and the server refuses items that don't quote from it.
+    if (saveState !== 'saved') await flush();
+    try {
+      await designApi.request(dkey, null, 'derive', selection);
+    } catch (e) {
+      toast((e as Error).message, 'err');
+      return;
+    }
+    const prefix = agent === 'codex' ? 'run ' : '';
+    if (!sendToAgent(`${prefix}/design derive ${ref} selection`)) {
+      toast('The session terminal is not connected', 'err');
+      void designApi.request(dkey, null, null);
+    }
+    void load();
+  };
 
   /** Facts the code backs but nothing has run yet — the ones a bulk verify is for. */
   const toVerify = items.filter((i) => i.kind === 'fact' && i.status === 'code' && !i.request);
@@ -241,6 +259,7 @@ export function DesignView({
           selected={selected}
           onChange={onDocChange}
           onPickMark={(id) => setSelected(id)}
+          onSelection={setSelection}
         />
       </section>
 
@@ -256,16 +275,26 @@ export function DesignView({
           <h3>Derived facts</h3>
           <button
             className="btn sm design-derive"
-            onClick={derive}
+            onClick={() => void derive()}
+            // mousedown would otherwise steal focus from the editor and clear the selection first
+            onMouseDown={(e) => e.preventDefault()}
             disabled={!agentLive || deriving || !docText.trim()}
             title={
               !agentLive
                 ? 'The session terminal is not live'
-                : 'Ask the session agent to read the whole document and derive facts, flags and targets'
+                : selection
+                  ? 'Derive only from the selected lines (the agent still reads the whole document for context)'
+                  : 'Ask the session agent to read the whole document and derive facts, flags and targets — select lines first to limit it'
             }
           >
             {deriving ? <span className="design-spin" /> : null}
-            {deriving ? 'Deriving…' : 'Derive facts'}
+            {deriving
+              ? state.binding.request?.scope
+                ? 'Deriving selection…'
+                : 'Deriving…'
+              : selection
+                ? 'Derive from selection'
+                : 'Derive facts'}
           </button>
           <button
             className="btn sm ghost"

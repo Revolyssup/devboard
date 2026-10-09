@@ -371,6 +371,15 @@ export async function createItems(key, incoming, { note } = {}) {
     if (!KINDS.has(it.kind)) throw fail(400, `${where}: kind must be fact|flag|target`);
     if (!norm(it.claim)) throw fail(400, `${where}: claim is required`);
     validateQuotes(doc, it.source?.quotes, where);
+    if (binding.request?.action === 'derive' && binding.request.scope) {
+      const sc = norm(binding.request.scope);
+      if (!it.source.quotes.some((q) => sc.includes(norm(q)))) {
+        throw fail(
+          400,
+          `${where}: this derive is limited to the selected prose (binding.request.scope); quote at least one fragment from inside it`
+        );
+      }
+    }
     const item = {
       n: 0,
       kind: it.kind,
@@ -497,10 +506,12 @@ export function retireItem(key, n, reason) {
 }
 
 /** The spinner: set by the UI when it sends a command, cleared by the agent (or by hand). */
-export function setRequest(key, n, request) {
+export function setRequest(key, n, request, { scope } = {}) {
   const b = requireBinding(key);
   const r = request ? { action: String(request), at: new Date().toISOString() } : null;
   if (n === null || n === undefined) {
+    // A derive limited to what the user selected: the selected prose travels with the request.
+    if (r && typeof scope === 'string' && norm(scope)) r.scope = scope;
     b.request = r;
     saveBinding(key, b);
     return;

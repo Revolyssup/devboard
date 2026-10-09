@@ -109,7 +109,7 @@ designRouter.post(
   route((req) => {
     const b = req.body || {};
     const n = b.item !== undefined || b.n !== undefined ? itemFrom(req) : null;
-    setRequest(keyFrom(req), n, b.action || null);
+    setRequest(keyFrom(req), n, b.action || null, { scope: b.scope });
     return { ok: true };
   })
 );
